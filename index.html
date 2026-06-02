@@ -1,0 +1,283 @@
+<!doctype html>
+<html lang="zh-Hant">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
+    <meta name="theme-color" content="#f7f8f3" />
+    <title>吉富 DM 模板編輯器</title>
+    <link rel="stylesheet" href="styles.css" />
+    <script src="app.js" defer></script>
+  </head>
+  <body>
+    <div class="app-shell" data-space="front">
+      <header class="topbar">
+        <div class="brand-lockup">
+          <button class="icon-btn mobile-menu-trigger" type="button" data-line-menu-toggle aria-label="開啟快速選單">
+            <span></span>
+            <span></span>
+            <span></span>
+          </button>
+          <div class="brand-mark" aria-hidden="true">JF</div>
+          <div>
+            <p class="eyebrow">Ji Fu Template System</p>
+            <h1>吉富 DM 編輯器</h1>
+          </div>
+        </div>
+
+        <div class="top-switch" role="group" aria-label="工作區切換">
+          <button class="segmented-btn is-active" type="button" data-space-switch="front">前台工作區</button>
+          <button class="segmented-btn" type="button" data-space-switch="admin">後台控制台</button>
+        </div>
+
+        <div class="top-actions">
+          <span class="status-pill status-good">版型鎖定</span>
+          <button class="btn btn-ghost" type="button" data-open-modal="rules">套版規則</button>
+        </div>
+      </header>
+
+      <main class="front-workspace is-active" data-space-panel="front">
+        <aside class="tool-rail" aria-label="套版工具列">
+          <button class="tool-btn is-active" type="button" data-tool="templates">
+            <span class="tool-icon">T</span>
+            模板
+          </button>
+          <button class="tool-btn" type="button" data-tool="data">
+            <span class="tool-icon">D</span>
+            資料
+          </button>
+          <button class="tool-btn" type="button" data-tool="fields">
+            <span class="tool-icon">F</span>
+            欄位
+          </button>
+          <button class="tool-btn" type="button" data-tool="brand">
+            <span class="tool-icon">B</span>
+            品牌
+          </button>
+          <button class="tool-btn" type="button" data-tool="export">
+            <span class="tool-icon">E</span>
+            匯出
+          </button>
+        </aside>
+
+        <section class="asset-panel is-open" data-asset-panel aria-label="工具面板">
+          <div class="panel-header">
+            <div>
+              <p class="eyebrow" data-tool-eyebrow>Template Library</p>
+              <h2 data-tool-title>模板庫</h2>
+            </div>
+            <button class="icon-btn mobile-panel-close" type="button" data-close-panel aria-label="關閉面板">×</button>
+          </div>
+          <div class="tool-panel" data-tool-panel="templates"></div>
+          <div class="tool-panel" data-tool-panel="data" hidden></div>
+          <div class="tool-panel" data-tool-panel="fields" hidden></div>
+          <div class="tool-panel" data-tool-panel="brand" hidden></div>
+          <div class="tool-panel" data-tool-panel="export" hidden></div>
+        </section>
+
+        <section class="canvas-workbench" aria-label="DM 預覽畫布">
+          <div class="notice notice-lock">
+            <div>
+              <strong>Canva-like 操作感，吉富式鎖版型</strong>
+              <span>你可以選模板、換資料、確認欄位與輸出；版型座標與品牌元素維持鎖定。</span>
+            </div>
+            <button class="btn btn-secondary" type="button" data-toast="目前是 UI Demo，尚未連接 Supabase。">狀態</button>
+          </div>
+
+          <div class="canvas-toolbar">
+            <div>
+              <p class="eyebrow" data-selected-size>A4 直式</p>
+              <h2 data-selected-template>經典直式 A4</h2>
+            </div>
+            <div class="canvas-controls">
+              <button class="icon-btn" type="button" data-zoom="out" aria-label="縮小">−</button>
+              <span class="zoom-label" data-zoom-label>92%</span>
+              <button class="icon-btn" type="button" data-zoom="in" aria-label="放大">+</button>
+            </div>
+          </div>
+
+          <div class="record-strip" data-record-strip aria-label="物件資料切換"></div>
+
+          <div class="stage">
+            <article class="artboard artboard-a4" data-artboard>
+              <div class="locked-ribbon">LOCKED TEMPLATE</div>
+              <div class="art-hero">
+                <span data-preview-image>固定圖片區</span>
+              </div>
+              <div class="art-content">
+                <span class="art-tag" data-preview-location>台北市信義區</span>
+                <h3 data-preview-title>信義景觀三房</h3>
+                <p data-preview-summary>近捷運、採光佳、格局方正，適合家庭換屋。</p>
+                <div class="art-facts">
+                  <span data-preview-bed>3 房</span>
+                  <span data-preview-size>42 坪</span>
+                  <span data-preview-type>住宅</span>
+                </div>
+                <strong data-preview-price>NT$ 58,800,000</strong>
+              </div>
+              <footer class="art-footer">
+                <span data-preview-agent>吉富房屋 / 王專員</span>
+                <span>Brand Locked</span>
+              </footer>
+            </article>
+          </div>
+        </section>
+
+        <aside class="inspector-panel" aria-label="右側檢查面板">
+          <section class="inspector-card">
+            <div class="section-heading compact">
+              <div>
+                <p class="eyebrow">Current Template</p>
+                <h2>模板資訊</h2>
+              </div>
+              <span class="status-pill status-good">可套版</span>
+            </div>
+            <dl class="template-meta" data-template-meta></dl>
+          </section>
+
+          <section class="inspector-card">
+            <div class="section-heading compact">
+              <div>
+                <p class="eyebrow">Field Matching</p>
+                <h2>AI 欄位判定</h2>
+              </div>
+              <span class="status-pill" data-match-score>92%</span>
+            </div>
+            <div class="compact-list" data-inspector-matches></div>
+          </section>
+
+          <section class="inspector-card">
+            <div class="section-heading compact">
+              <div>
+                <p class="eyebrow">Layout Guard</p>
+                <h2>鎖定層</h2>
+              </div>
+            </div>
+            <div class="compact-list" data-locked-layers></div>
+          </section>
+
+          <section class="inspector-card">
+            <div class="section-heading compact">
+              <div>
+                <p class="eyebrow">Output Check</p>
+                <h2>輸出檢查</h2>
+              </div>
+            </div>
+            <div class="check-list" data-output-checks></div>
+          </section>
+        </aside>
+      </main>
+
+      <main class="admin-console" data-space-panel="admin" aria-label="後台控制台">
+        <section class="admin-hero">
+          <div>
+            <p class="eyebrow">Template Control Center</p>
+            <h2>模板版本、欄位槽位與品牌規則集中管理</h2>
+          </div>
+          <button class="btn btn-primary" type="button" data-open-modal="template">新增模板規則</button>
+        </section>
+
+        <section class="admin-grid">
+          <article class="admin-card admin-card-wide">
+            <div class="section-heading compact">
+              <div>
+                <p class="eyebrow">Registry</p>
+                <h2>模板版本控管</h2>
+              </div>
+              <span class="status-pill">Demo</span>
+            </div>
+            <div class="table-wrap">
+              <table>
+                <thead>
+                  <tr>
+                    <th>模板</th>
+                    <th>用途</th>
+                    <th>尺寸</th>
+                    <th>版本</th>
+                    <th>欄位</th>
+                    <th>狀態</th>
+                  </tr>
+                </thead>
+                <tbody data-admin-template-table></tbody>
+              </table>
+            </div>
+          </article>
+
+          <article class="admin-card">
+            <div class="section-heading compact">
+              <div>
+                <p class="eyebrow">Editable Slots</p>
+                <h2>可編輯欄位</h2>
+              </div>
+            </div>
+            <div class="rule-stack" data-admin-slots></div>
+          </article>
+
+          <article class="admin-card">
+            <div class="section-heading compact">
+              <div>
+                <p class="eyebrow">Locked Elements</p>
+                <h2>不可改動元素</h2>
+              </div>
+            </div>
+            <div class="rule-stack" data-admin-locked></div>
+          </article>
+
+          <article class="admin-card admin-card-wide">
+            <div class="section-heading compact">
+              <div>
+                <p class="eyebrow">Preflight</p>
+                <h2>假版型檢查</h2>
+              </div>
+              <button class="btn btn-secondary" type="button" data-toast="Demo 檢查完成：仍有 1 個欄位需確認。">檢查一次</button>
+            </div>
+            <div class="preflight-grid" data-admin-checks></div>
+          </article>
+        </section>
+      </main>
+    </div>
+
+    <nav class="mobile-bottom-toolbar" aria-label="手機工具列">
+      <button class="is-active" type="button" data-mobile-tool="templates">模板</button>
+      <button type="button" data-mobile-tool="data">資料</button>
+      <button type="button" data-mobile-tool="fields">欄位</button>
+      <button type="button" data-mobile-tool="brand">品牌</button>
+      <button type="button" data-mobile-tool="export">匯出</button>
+    </nav>
+
+    <div class="line-menu" data-line-menu aria-hidden="true">
+      <div class="line-menu-panel">
+        <div class="line-menu-header">
+          <strong>快速選單</strong>
+          <button class="icon-btn" type="button" data-line-menu-close aria-label="關閉快速選單">×</button>
+        </div>
+        <div class="line-menu-grid">
+          <button type="button" data-mobile-tool="templates">模板</button>
+          <button type="button" data-mobile-tool="data">資料</button>
+          <button type="button" data-mobile-tool="fields">欄位</button>
+          <button type="button" data-mobile-tool="brand">品牌</button>
+          <button type="button" data-mobile-tool="export">匯出</button>
+          <button type="button" data-space-switch="admin">後台</button>
+        </div>
+      </div>
+    </div>
+
+    <div class="modal-backdrop" data-modal hidden>
+      <section class="modal" role="dialog" aria-modal="true" aria-labelledby="modalTitle">
+        <header class="modal-header">
+          <div>
+            <p class="eyebrow" id="modalEyebrow">Demo</p>
+            <h2 id="modalTitle">Modal</h2>
+          </div>
+          <button class="icon-btn" type="button" data-modal-close aria-label="關閉視窗">×</button>
+        </header>
+        <div class="modal-body" id="modalBody"></div>
+        <footer class="modal-footer">
+          <button class="btn btn-ghost" type="button" data-modal-close>取消</button>
+          <button class="btn btn-primary" type="button" data-modal-confirm>確認</button>
+        </footer>
+      </section>
+    </div>
+
+    <div class="toast-host" data-toast-host aria-live="polite" aria-atomic="true"></div>
+  </body>
+</html>
