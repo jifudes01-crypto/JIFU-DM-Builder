@@ -1,28 +1,23 @@
 "use client";
 
 import dynamic from "next/dynamic";
-import type { RefObject } from "react";
-import type Konva from "konva";
-import type { Contact, TemplateWithBlocks } from "@/types/database";
+import type { TemplateCanvasPreviewProps } from "@/types/component-props";
 
-interface TemplateCanvasPreviewProps {
-  template: TemplateWithBlocks;
-  values: Record<string, string>;
-  images: Record<string, string>;
-  contact: Contact | null;
-  scale?: number;
-  stageRef?: RefObject<Konva.Stage | null>;
-  showGuides?: boolean;
-}
-
-const TemplateCanvasPreviewInner = dynamic(
-  () => import("@/components/front/TemplateCanvasPreviewInner").then((mod) => mod.TemplateCanvasPreview),
+const DynamicTemplateCanvasPreview = dynamic<TemplateCanvasPreviewProps>(
+  () => import("@/components/front/TemplateCanvasPreviewImpl").then((mod) => mod.TemplateCanvasPreview),
   {
     ssr: false,
-    loading: () => <div className="flex min-h-[420px] items-center justify-center rounded-xl bg-slate-50 text-sm text-slate-500">預覽載入中...</div>
+    loading: () => (
+      <div className="grid min-h-96 place-items-center rounded-lg border border-line bg-slate-100 p-4 text-center">
+        <div>
+          <p className="text-lg font-black text-navy-900">預覽載入中</p>
+          <p className="mt-2 text-base text-slate-600">畫布只會在瀏覽器端建立。</p>
+        </div>
+      </div>
+    )
   }
 );
 
 export function TemplateCanvasPreview(props: TemplateCanvasPreviewProps) {
-  return <TemplateCanvasPreviewInner {...props} />;
+  return <DynamicTemplateCanvasPreview {...props} />;
 }

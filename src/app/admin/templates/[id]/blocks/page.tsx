@@ -1,6 +1,7 @@
 import Link from "next/link";
-import { TemplateBlockEditor } from "@/components/admin/TemplateBlockEditor";
+import { TemplateBlockEditorClient } from "@/components/admin/TemplateBlockEditorClient";
 import { getTemplateWithBlocks } from "@/lib/data";
+import { demoTemplates } from "@/lib/demo-data";
 
 interface BlocksPageProps {
   params: Promise<{ id: string }>;
@@ -28,7 +29,11 @@ export default async function BlocksPage({ params }: BlocksPageProps) {
         <h1 className="section-title">{template.name}</h1>
         <p className="section-subtitle">後台人工框選可編輯區域；前台只能填資料，不能拖曳或修改版面。</p>
       </div>
-      <TemplateBlockEditor template={template} />
+      <TemplateBlockEditorClient template={template} />
     </section>
   );
+}
+
+export function generateStaticParams() {
+  return demoTemplates.map((template) => ({ id: template.id }));
 }

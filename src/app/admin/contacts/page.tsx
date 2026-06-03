@@ -1,5 +1,5 @@
 import { ContactsImportForm } from "@/components/admin/ContactsImportForm";
-import { createContactAction, updateContactAction, updateContactStatusAction } from "@/actions/admin";
+import { StaticForm } from "@/components/ui/StaticForm";
 import { listContacts, listTeams } from "@/lib/data";
 
 export default async function ContactsPage() {
@@ -15,7 +15,7 @@ export default async function ContactsPage() {
 
       <ContactsImportForm teams={teams} />
 
-      <form action={createContactAction} encType="multipart/form-data" className="card grid gap-4 p-5 lg:grid-cols-3">
+      <StaticForm encType="multipart/form-data" className="card grid gap-4 p-5 lg:grid-cols-3">
         <label>
           <span className="field-label">姓名</span>
           <input name="name" required />
@@ -67,7 +67,7 @@ export default async function ContactsPage() {
             新增人員
           </button>
         </div>
-      </form>
+      </StaticForm>
 
       <div className="card overflow-x-auto">
         <table className="table-clean">
@@ -98,18 +98,17 @@ export default async function ContactsPage() {
                   <td>{contact.is_active ? "啟用" : "停用"}</td>
                   <td>
                     <div className="flex flex-wrap gap-2">
-                      <form action={updateContactStatusAction}>
+                      <StaticForm>
                         <input type="hidden" name="contact_id" value={contact.id} />
                         <input type="hidden" name="is_active" value={contact.is_active ? "false" : "true"} />
                         <button type="submit" className="btn btn-secondary">
                           {contact.is_active ? "停用" : "啟用"}
                         </button>
-                      </form>
+                      </StaticForm>
                     </div>
                     <details className="mt-3">
                       <summary className="cursor-pointer text-base font-bold text-action">編輯人員</summary>
-                      <form
-                        action={updateContactAction}
+                      <StaticForm
                         encType="multipart/form-data"
                         className="mt-3 grid gap-3 rounded-lg border border-line bg-slate-50 p-3 md:grid-cols-2"
                       >
@@ -163,7 +162,7 @@ export default async function ContactsPage() {
                         <button type="submit" className="btn btn-blue md:col-span-2">
                           儲存修改
                         </button>
-                      </form>
+                      </StaticForm>
                     </details>
                   </td>
                 </tr>

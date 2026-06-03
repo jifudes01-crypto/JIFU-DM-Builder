@@ -1,20 +1,11 @@
 "use client";
 
-import { useEffect, useMemo, useState, type RefObject } from "react";
+import { useEffect, useMemo, useState, type MutableRefObject } from "react";
 import { Image as KonvaImage, Layer, Rect, Stage, Text } from "react-konva";
 import type Konva from "konva";
 import QRCode from "qrcode";
-import type { Contact, TemplateBlock, TemplateWithBlocks } from "@/types/database";
-
-interface TemplateCanvasPreviewProps {
-  template: TemplateWithBlocks;
-  values: Record<string, string>;
-  images: Record<string, string>;
-  contact: Contact | null;
-  scale?: number;
-  stageRef?: RefObject<Konva.Stage | null>;
-  showGuides?: boolean;
-}
+import type { TemplateCanvasPreviewProps } from "@/types/component-props";
+import type { Contact, TemplateBlock } from "@/types/database";
 
 function useLoadedImage(src?: string | null) {
   const [image, setImage] = useState<HTMLImageElement | null>(null);
@@ -166,6 +157,12 @@ export function TemplateCanvasPreview({
   const [qrDataUrl, setQrDataUrl] = useState<string | null>(null);
   const blocks = useMemo(() => [...template.blocks].sort((a, b) => a.z_index - b.z_index), [template.blocks]);
 
+  function setStageRef(node: Konva.Stage | null) {
+    if (stageRef) {
+      (stageRef as MutableRefObject<Konva.Stage | null>).current = node;
+    }
+  }
+
   useEffect(() => {
     const qrText = contact?.qrcode_url || contact?.line_id || contact?.mobile || contact?.email || "吉富房屋";
     if (contact?.qrcode_url) {
@@ -182,7 +179,7 @@ export function TemplateCanvasPreview({
     <div className="overflow-auto rounded-lg border border-line bg-slate-100 p-4">
       <div style={{ width: template.width * scale, height: template.height * scale }}>
         <Stage
-          ref={stageRef}
+          ref={setStageRef}
           width={template.width}
           height={template.height}
           style={{ transform: `scale(${scale})`, transformOrigin: "top left" }}

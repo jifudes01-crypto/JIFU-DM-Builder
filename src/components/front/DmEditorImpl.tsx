@@ -2,31 +2,20 @@
 
 import { zodResolver } from "@hookform/resolvers/zod";
 import jsPDF from "jspdf";
-import type Konva from "konva";
 import { useEffect, useMemo, useRef, useState, useTransition } from "react";
 import { useForm, type Resolver } from "react-hook-form";
 import * as XLSX from "xlsx";
 import { z } from "zod";
-import { submitPrintRequestAction } from "@/actions/front";
 import { ImageUploadField } from "@/components/front/ImageUploadField";
 import { TemplateCanvasPreview } from "@/components/front/TemplateCanvasPreview";
+import type { DmEditorProps, StageExportHandle } from "@/types/component-props";
 import type {
   BatchRow,
-  Contact,
   EditorFormValues,
-  PrintOption,
-  TemplateBlock,
-  TemplateWithBlocks
+  TemplateBlock
 } from "@/types/database";
 
-interface DmEditorProps {
-  teamId: string;
-  template: TemplateWithBlocks;
-  contacts: Contact[];
-  printOptions: PrintOption[];
-}
-
-function groupOptions(options: PrintOption[], type: PrintOption["type"]) {
+function groupOptions(options: DmEditorProps["printOptions"], type: DmEditorProps["printOptions"][number]["type"]) {
   return options.filter((option) => option.type === type);
 }
 
@@ -45,7 +34,7 @@ function downloadDataUrl(dataUrl: string, filename: string) {
   link.click();
 }
 
-function dataUrlToPdfDataUrl(imageDataUrl: string, template: TemplateWithBlocks) {
+function dataUrlToPdfDataUrl(imageDataUrl: string, template: DmEditorProps["template"]) {
   const pdf = new jsPDF({
     orientation: template.width > template.height ? "landscape" : "portrait",
     unit: "px",
@@ -89,7 +78,7 @@ function createSchema(blocks: TemplateBlock[]) {
 }
 
 export function DmEditor({ teamId, template, contacts, printOptions }: DmEditorProps) {
-  const stageRef = useRef<Konva.Stage>(null);
+  const stageRef = useRef<StageExportHandle | null>(null);
   const [message, setMessage] = useState("");
   const [batchRows, setBatchRows] = useState<BatchRow[]>([]);
   const [batchIndex, setBatchIndex] = useState(0);
@@ -228,25 +217,30 @@ export function DmEditor({ teamId, template, contacts, printOptions }: DmEditorP
       try {
         setMessage("正在送出印刷需求...");
         const exports = await createExports();
-        const result = await submitPrintRequestAction({
+        const requestPayload = {
+          id: crypto.randomUUID(),
           teamId,
           templateId: template.id,
           contactId: selectedContact?.id ?? null,
-          pngDataUrl: exports.png,
-          jpgDataUrl: exports.jpg,
-          pdfDataUrl: exports.pdf,
           printQuantity: String(formData.get("print_quantity") ?? ""),
           paper: String(formData.get("paper") ?? ""),
           size: String(formData.get("size") ?? ""),
           isRush: formData.get("is_rush") === "yes",
           isCutting: formData.get("is_cutting") === "yes",
           message: String(formData.get("message") ?? ""),
+          createdAt: new Date().toISOString(),
+          files: {
+            png: exports.png,
+            jpg: exports.jpg,
+            pdf: exports.pdf
+          },
           payload: {
             values: form.getValues("values"),
             batchRow: batchRows[batchIndex] ?? null
           }
-        });
-        setMessage(result.message);
+        };
+        localStorage.setItem(`jifu-print-request:${requestPayload.id}`, JSON.stringify(requestPayload));
+        setMessage("GitHub Pages 是靜態展示環境，印刷需求已暫存在這台電腦；正式送印需部署到可連接 Supabase 的環境。");
       } catch (error) {
         setMessage(error instanceof Error ? error.message : "送出失敗，請再試一次。");
       }

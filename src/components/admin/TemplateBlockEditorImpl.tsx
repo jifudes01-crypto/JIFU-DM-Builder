@@ -3,8 +3,8 @@
 import { useEffect, useRef, useState, useTransition } from "react";
 import { Image as KonvaImage, Layer, Rect, Stage, Text, Transformer } from "react-konva";
 import type Konva from "konva";
-import { saveTemplateBlocksAction } from "@/actions/admin";
-import type { BlockType, TemplateBlock, TemplateWithBlocks } from "@/types/database";
+import type { TemplateBlockEditorProps } from "@/types/component-props";
+import type { BlockType, TemplateBlock } from "@/types/database";
 
 const blockTypes: BlockType[] = [
   "text",
@@ -20,10 +20,6 @@ const blockTypes: BlockType[] = [
   "qrcode",
   "logo"
 ];
-
-interface TemplateBlockEditorProps {
-  template: TemplateWithBlocks;
-}
 
 function useLoadedImage(src: string) {
   const [image, setImage] = useState<HTMLImageElement | null>(null);
@@ -102,12 +98,12 @@ export function TemplateBlockEditor({ template }: TemplateBlockEditorProps) {
   function save() {
     startTransition(async () => {
       try {
-        setMessage("正在儲存區塊...");
-        await saveTemplateBlocksAction(
-          template.id,
-          blocks.map((block, index) => ({ ...block, z_index: index + 1 }))
+        setMessage("正在暫存區塊...");
+        localStorage.setItem(
+          `jifu-template-blocks:${template.id}`,
+          JSON.stringify(blocks.map((block, index) => ({ ...block, z_index: index + 1 })))
         );
-        setMessage("區塊已儲存。前台會讀取最新設定。");
+        setMessage("GitHub Pages 是靜態展示環境，區塊已暫存在這台電腦；正式儲存需部署到可連接 Supabase 的環境。");
       } catch (error) {
         setMessage(error instanceof Error ? error.message : "儲存失敗，請稍後再試。");
       }
