@@ -1,5 +1,5 @@
-import { updatePrintRequestAction } from "@/actions/admin";
 import { PrintRequestsExportButton } from "@/components/admin/PrintRequestsExportButton";
+import { StaticForm } from "@/components/ui/StaticForm";
 import { listPrintRequests } from "@/lib/data";
 import type { PrintStatus } from "@/types/database";
 
@@ -120,7 +120,7 @@ export default async function PrintRequestsPage() {
                   ) : null}
                 </div>
               </div>
-              <form action={updatePrintRequestAction} className="grid content-start gap-4">
+              <StaticForm className="grid content-start gap-4">
                 <input type="hidden" name="request_id" value={request.id} />
                 <label>
                   <span className="field-label">處理狀態</span>
@@ -139,7 +139,7 @@ export default async function PrintRequestsPage() {
                 <button type="submit" className="btn btn-blue">
                   更新狀態
                 </button>
-              </form>
+              </StaticForm>
             </article>
           ))
         ) : (

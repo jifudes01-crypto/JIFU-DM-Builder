@@ -1,7 +1,10 @@
 import type { NextConfig } from "next";
 
 const nextConfig: NextConfig = {
+  output: "export",
   trailingSlash: true,
+  basePath: "/JIFU-DM-Builder",
+  assetPrefix: "/JIFU-DM-Builder/",
   images: {
     unoptimized: true,
     remotePatterns: [

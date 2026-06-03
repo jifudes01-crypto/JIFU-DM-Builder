@@ -2,7 +2,7 @@
 
 import { useState } from "react";
 import * as XLSX from "xlsx";
-import { importContactsAction } from "@/actions/admin";
+import { StaticForm } from "@/components/ui/StaticForm";
 import type { Team } from "@/types/database";
 
 interface ContactsImportFormProps {
@@ -35,7 +35,7 @@ export function ContactsImportForm({ teams }: ContactsImportFormProps) {
   }
 
   return (
-    <form action={importContactsAction} className="card grid gap-4 p-5 md:grid-cols-[1fr_1fr_auto] md:items-end">
+    <StaticForm className="card grid gap-4 p-5 md:grid-cols-[1fr_1fr_auto] md:items-end">
       <label>
         <span className="field-label">匯入到團隊</span>
         <select name="team_id">
@@ -54,6 +54,6 @@ export function ContactsImportForm({ teams }: ContactsImportFormProps) {
       <button type="submit" className="btn btn-blue" disabled={count === 0}>
         匯入 {count || ""} 筆
       </button>
-    </form>
+    </StaticForm>
   );
 }

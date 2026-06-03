@@ -6,7 +6,6 @@ import { useEffect, useMemo, useRef, useState, useTransition } from "react";
 import { useForm, type Resolver } from "react-hook-form";
 import * as XLSX from "xlsx";
 import { z } from "zod";
-import { submitPrintRequestAction } from "@/actions/front";
 import { ImageUploadField } from "@/components/front/ImageUploadField";
 import { TemplateCanvasPreview } from "@/components/front/TemplateCanvasPreview";
 import type { DmEditorProps, StageExportHandle } from "@/types/component-props";
@@ -251,7 +250,9 @@ export function DmEditor({ teamId, template, contacts, printOptions }: DmEditorP
           };
         });
         const totalQuantity = batchItems.reduce((sum, item) => sum + item.quantity, 0);
-        const result = await submitPrintRequestAction({
+        const savedRequest = {
+          id: crypto.randomUUID(),
+          createdAt: new Date().toISOString(),
           teamId,
           templateId: template.id,
           contactId: selectedContact?.id ?? null,
@@ -270,9 +271,12 @@ export function DmEditor({ teamId, template, contacts, printOptions }: DmEditorP
             values: form.getValues("values"),
             batchRow: batchRows[batchIndex] ?? null
           }
-        });
+        };
+        const rawRequests = localStorage.getItem("jifu-print-requests");
+        const requests = rawRequests ? JSON.parse(rawRequests) : [];
+        localStorage.setItem("jifu-print-requests", JSON.stringify([savedRequest, ...requests]));
         setConfirmingPrint(null);
-        setMessage(result.message);
+        setMessage("印刷需求已在此裝置暫存。GitHub Pages 是靜態網站，正式同步後台需連接 Supabase 前端寫入權限。");
       } catch (error) {
         setMessage(error instanceof Error ? error.message : "送出失敗，請再試一次。");
       }
