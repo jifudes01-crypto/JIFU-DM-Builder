@@ -1,9 +1,9 @@
 import Link from "next/link";
-import { listAdminTemplates, listContacts, listPrintOptions, listPrintRequests, listTeams } from "@/lib/data";
+import { listAdminTeams, listAdminTemplates, listContacts, listPrintOptions, listPrintRequests } from "@/lib/data";
 
 export default async function AdminPage() {
   const [teams, templates, contacts, printOptions, printRequests] = await Promise.all([
-    listTeams(),
+    listAdminTeams(),
     listAdminTemplates(),
     listContacts(undefined, false),
     listPrintOptions(false),
@@ -11,7 +11,7 @@ export default async function AdminPage() {
   ]);
 
   const cards = [
-    { label: "團隊", value: teams.length, href: "/admin/templates" },
+    { label: "團隊", value: teams.length, href: "/admin/teams" },
     { label: "模板", value: templates.length, href: "/admin/templates" },
     { label: "通訊錄", value: contacts.length, href: "/admin/contacts" },
     { label: "印刷選項", value: printOptions.length, href: "/admin/print-options" },

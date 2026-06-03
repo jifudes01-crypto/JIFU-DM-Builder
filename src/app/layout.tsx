@@ -26,11 +26,8 @@ export default function RootLayout({
               </span>
             </Link>
             <nav className="flex items-center gap-2">
-              <Link href="/" className="btn btn-secondary hidden sm:inline-flex">
-                前台製作
-              </Link>
-              <Link href="/admin" className="btn btn-primary">
-                後台管理
+              <Link href="/" className="btn btn-primary">
+                回工作台
               </Link>
             </nav>
           </div>

@@ -33,7 +33,7 @@ export function TemplatesPageClient({ teams, templates }: TemplatesPageClientPro
       <section className="mb-6 rounded-lg bg-white p-6 shadow-tight">
         <p className="eyebrow">Step 2</p>
         <h1 className="section-title">選擇模板</h1>
-        <p className="section-subtitle">{team.name} 目前只會顯示已上架且完成區塊設定的模板。</p>
+        <p className="section-subtitle">{team.description || `${team.name} 目前只會顯示已上架且完成區塊設定的模板。`}</p>
       </section>
 
       {visibleTemplates.length ? (

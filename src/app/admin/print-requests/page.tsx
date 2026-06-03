@@ -1,4 +1,5 @@
-import { StaticForm } from "@/components/ui/StaticForm";
+import { updatePrintRequestAction } from "@/actions/admin";
+import { PrintRequestsExportButton } from "@/components/admin/PrintRequestsExportButton";
 import { listPrintRequests } from "@/lib/data";
 import type { PrintStatus } from "@/types/database";
 
@@ -16,9 +17,12 @@ export default async function PrintRequestsPage() {
   return (
     <section className="space-y-6">
       <div className="rounded-lg bg-white p-6 shadow-tight">
-        <p className="eyebrow">Print Requests</p>
+        <p className="eyebrow">印刷需求</p>
         <h1 className="section-title">印刷需求後台</h1>
         <p className="section-subtitle">查看前台送出的印刷需求，更新處理狀態與內部備註。</p>
+        <div className="mt-4">
+          <PrintRequestsExportButton requests={requests} />
+        </div>
       </div>
 
       <div className="grid gap-4">
@@ -53,14 +57,16 @@ export default async function PrintRequestsPage() {
                     <dd>{request.contacts?.name ?? "-"}</dd>
                   </div>
                   <div>
-                    <dt className="font-bold text-slate-500">數量</dt>
-                    <dd>{request.print_quantity ?? "-"}</dd>
+                    <dt className="font-bold text-slate-500">總件數</dt>
+                    <dd>{request.total_quantity || request.print_quantity || "-"}</dd>
                   </div>
                   <div>
-                    <dt className="font-bold text-slate-500">紙張 / 尺寸</dt>
-                    <dd>
-                      {request.paper ?? "-"} / {request.size ?? "-"}
-                    </dd>
+                    <dt className="font-bold text-slate-500">材質尺寸</dt>
+                    <dd>{request.material_summary || [request.paper, request.size].filter(Boolean).join(" / ") || "-"}</dd>
+                  </div>
+                  <div>
+                    <dt className="font-bold text-slate-500">廠商</dt>
+                    <dd>{request.vendor ?? "-"}</dd>
                   </div>
                   <div>
                     <dt className="font-bold text-slate-500">急件</dt>
@@ -71,6 +77,30 @@ export default async function PrintRequestsPage() {
                     <dd>{request.is_cutting ? "是" : "否"}</dd>
                   </div>
                 </dl>
+                {request.batch_items?.length ? (
+                  <div className="mt-4 overflow-x-auto rounded-lg border border-line">
+                    <table className="table-clean">
+                      <thead>
+                        <tr>
+                          <th>業務</th>
+                          <th>數量</th>
+                          <th>材質尺寸</th>
+                          <th>廠商</th>
+                        </tr>
+                      </thead>
+                      <tbody>
+                        {request.batch_items.map((item) => (
+                          <tr key={item.id}>
+                            <td>{item.contactName}</td>
+                            <td>{item.quantity}</td>
+                            <td>{item.materialSize}</td>
+                            <td>{item.vendor}</td>
+                          </tr>
+                        ))}
+                      </tbody>
+                    </table>
+                  </div>
+                ) : null}
                 <p className="mt-4 rounded-lg bg-slate-50 p-3 text-base text-slate-700">{request.message || "無留言"}</p>
                 <div className="mt-4 flex flex-wrap gap-2">
                   {request.png_url ? (
@@ -90,7 +120,7 @@ export default async function PrintRequestsPage() {
                   ) : null}
                 </div>
               </div>
-              <StaticForm className="grid content-start gap-4">
+              <form action={updatePrintRequestAction} className="grid content-start gap-4">
                 <input type="hidden" name="request_id" value={request.id} />
                 <label>
                   <span className="field-label">處理狀態</span>
@@ -109,7 +139,7 @@ export default async function PrintRequestsPage() {
                 <button type="submit" className="btn btn-blue">
                   更新狀態
                 </button>
-              </StaticForm>
+              </form>
             </article>
           ))
         ) : (

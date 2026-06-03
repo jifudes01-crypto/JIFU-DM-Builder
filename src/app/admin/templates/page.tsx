@@ -1,19 +1,25 @@
 import Link from "next/link";
-import { StaticForm } from "@/components/ui/StaticForm";
-import { listAdminTemplates, listTeams } from "@/lib/data";
+import {
+  createTemplateAction,
+  deleteTemplateAction,
+  duplicateTemplateAction,
+  updateTemplateAction,
+  updateTemplateStatusAction
+} from "@/actions/admin";
+import { listAdminTeams, listAdminTemplates } from "@/lib/data";
 
 export default async function AdminTemplatesPage() {
-  const [teams, templates] = await Promise.all([listTeams(), listAdminTemplates()]);
+  const [teams, templates] = await Promise.all([listAdminTeams(), listAdminTemplates()]);
 
   return (
     <section className="space-y-6">
       <div className="rounded-lg bg-white p-6 shadow-tight">
-        <p className="eyebrow">Template Registry</p>
+        <p className="eyebrow">模板管理</p>
         <h1 className="section-title">模板管理</h1>
         <p className="section-subtitle">上架模板才會顯示在前台；沒有區塊設定的模板不能進入製作。</p>
       </div>
 
-      <StaticForm encType="multipart/form-data" className="card grid gap-4 p-5 lg:grid-cols-3">
+      <form action={createTemplateAction} encType="multipart/form-data" className="card grid gap-4 p-5 lg:grid-cols-3">
         <label>
           <span className="field-label">模板名稱</span>
           <input name="name" required placeholder="每月精選 A4 直式" />
@@ -65,7 +71,7 @@ export default async function AdminTemplatesPage() {
             新增模板
           </button>
         </div>
-      </StaticForm>
+      </form>
 
       <div className="card overflow-x-auto">
         <table className="table-clean">
@@ -94,36 +100,39 @@ export default async function AdminTemplatesPage() {
                   <td>{template.size_label}</td>
                   <td>{template.block_count ?? 0}</td>
                   <td>
-                    <span className="status-pill border-line bg-white text-slate-700">{template.status}</span>
+                    <span className="status-pill border-line bg-white text-slate-700">
+                      {template.status === "published" ? "上架" : template.status === "archived" ? "封存" : "草稿"}
+                    </span>
                   </td>
                   <td>
                     <div className="flex flex-wrap gap-2">
                       <Link href={`/admin/templates/${template.id}/blocks`} className="btn btn-secondary">
                         設定區塊
                       </Link>
-                      <StaticForm>
+                      <form action={updateTemplateStatusAction}>
                         <input type="hidden" name="template_id" value={template.id} />
                         <input type="hidden" name="status" value={template.status === "published" ? "draft" : "published"} />
                         <button type="submit" className="btn btn-muted">
                           {template.status === "published" ? "下架" : "上架"}
                         </button>
-                      </StaticForm>
-                      <StaticForm>
+                      </form>
+                      <form action={duplicateTemplateAction}>
                         <input type="hidden" name="template_id" value={template.id} />
                         <button type="submit" className="btn btn-secondary">
                           複製
                         </button>
-                      </StaticForm>
-                      <StaticForm>
+                      </form>
+                      <form action={deleteTemplateAction}>
                         <input type="hidden" name="template_id" value={template.id} />
                         <button type="submit" className="btn btn-danger">
                           刪除
                         </button>
-                      </StaticForm>
+                      </form>
                     </div>
                     <details className="mt-3">
                       <summary className="cursor-pointer text-base font-bold text-action">編輯模板資料</summary>
-                      <StaticForm
+                      <form
+                        action={updateTemplateAction}
                         encType="multipart/form-data"
                         className="mt-3 grid gap-3 rounded-lg border border-line bg-slate-50 p-3 md:grid-cols-2"
                       >
@@ -169,7 +178,7 @@ export default async function AdminTemplatesPage() {
                         <button type="submit" className="btn btn-blue md:col-span-2">
                           儲存修改
                         </button>
-                      </StaticForm>
+                      </form>
                     </details>
                   </td>
                 </tr>

@@ -24,9 +24,12 @@ exception when duplicate_object then null;
 end $$;
 
 do $$ begin
-  create type print_option_type as enum ('quantity', 'paper', 'size', 'rush', 'cutting');
+  create type print_option_type as enum ('quantity', 'material_size', 'vendor', 'rush', 'cutting', 'paper', 'size');
 exception when duplicate_object then null;
 end $$;
+
+alter type print_option_type add value if not exists 'material_size';
+alter type print_option_type add value if not exists 'vendor';
 
 do $$ begin
   create type print_status as enum ('pending', 'processing', 'sent', 'completed', 'cancelled');
@@ -51,6 +54,7 @@ $$;
 create table if not exists teams (
   id uuid primary key default gen_random_uuid(),
   name text not null,
+  description text,
   slug text not null unique,
   is_active boolean not null default true,
   sort_order integer not null default 100,
@@ -118,6 +122,7 @@ create table if not exists print_options (
   type print_option_type not null,
   label text not null,
   value text not null,
+  vendor text,
   sort_order integer not null default 100,
   is_active boolean not null default true,
   created_at timestamptz not null default now(),
@@ -149,6 +154,10 @@ create table if not exists print_requests (
   print_quantity text,
   paper text,
   size text,
+  total_quantity integer not null default 0,
+  material_summary text,
+  vendor text,
+  batch_items jsonb not null default '[]'::jsonb,
   is_rush boolean not null default false,
   is_cutting boolean not null default false,
   message text,
@@ -163,6 +172,13 @@ create index if not exists idx_templates_team_status on templates(team_id, statu
 create index if not exists idx_template_blocks_template on template_blocks(template_id, z_index);
 create index if not exists idx_contacts_team_active on contacts(team_id, is_active);
 create index if not exists idx_print_requests_status on print_requests(status, created_at desc);
+
+alter table teams add column if not exists description text;
+alter table print_options add column if not exists vendor text;
+alter table print_requests add column if not exists total_quantity integer not null default 0;
+alter table print_requests add column if not exists material_summary text;
+alter table print_requests add column if not exists vendor text;
+alter table print_requests add column if not exists batch_items jsonb not null default '[]'::jsonb;
 
 drop trigger if exists teams_set_updated_at on teams;
 create trigger teams_set_updated_at before update on teams for each row execute function set_updated_at();
@@ -189,20 +205,13 @@ values
   ('dm-exports', 'dm-exports', true)
 on conflict (id) do update set public = excluded.public;
 
-insert into teams (name, slug, sort_order)
+insert into print_options (type, label, value, vendor, sort_order)
 values
-  ('台北一部', 'taipei-1', 1),
-  ('豪宅事業部', 'luxury', 2)
-on conflict (slug) do nothing;
-
-insert into print_options (type, label, value, sort_order)
-values
-  ('quantity', '100 份', '100', 1),
-  ('quantity', '300 份', '300', 2),
-  ('quantity', '500 份', '500', 3),
-  ('paper', '銅版紙', '銅版紙', 1),
-  ('paper', '霧面紙', '霧面紙', 2),
-  ('size', 'A4', 'A4', 1),
-  ('size', 'A5', 'A5', 2),
-  ('rush', '急件', 'yes', 1),
-  ('cutting', '需要裁切', 'yes', 1);
+  ('quantity', '一般印量', '100', null, 1),
+  ('quantity', '一般印量', '300', null, 2),
+  ('quantity', '一般印量', '500', null, 3),
+  ('material_size', '銅版紙 A4', '銅版紙 A4', null, 1),
+  ('material_size', '霧面紙 A4', '霧面紙 A4', null, 2),
+  ('vendor', '預設廠商', '預設廠商', '預設廠商', 1),
+  ('rush', '急件', 'yes', null, 1),
+  ('cutting', '需要裁切', 'yes', null, 1);

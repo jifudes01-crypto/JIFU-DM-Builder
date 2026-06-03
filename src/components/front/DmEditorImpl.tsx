@@ -6,6 +6,7 @@ import { useEffect, useMemo, useRef, useState, useTransition } from "react";
 import { useForm, type Resolver } from "react-hook-form";
 import * as XLSX from "xlsx";
 import { z } from "zod";
+import { submitPrintRequestAction } from "@/actions/front";
 import { ImageUploadField } from "@/components/front/ImageUploadField";
 import { TemplateCanvasPreview } from "@/components/front/TemplateCanvasPreview";
 import type { DmEditorProps, StageExportHandle } from "@/types/component-props";
@@ -83,13 +84,19 @@ export function DmEditor({ teamId, template, contacts, printOptions }: DmEditorP
   const [batchRows, setBatchRows] = useState<BatchRow[]>([]);
   const [batchIndex, setBatchIndex] = useState(0);
   const [needsPrint, setNeedsPrint] = useState(false);
+  const [confirmingPrint, setConfirmingPrint] = useState<FormData | null>(null);
+  const [generated, setGenerated] = useState<{ png: string; jpg: string; pdf: string; saveKey: string } | null>(null);
   const [isPending, startTransition] = useTransition();
   const schema = useMemo(() => createSchema(template.blocks), [template.blocks]);
   const textBlocks = template.blocks.filter((block) => !isImageBlock(block) && block.type !== "qrcode");
   const imageBlocks = template.blocks.filter((block) => isImageBlock(block));
   const quantityOptions = groupOptions(printOptions, "quantity");
-  const paperOptions = groupOptions(printOptions, "paper");
-  const sizeOptions = groupOptions(printOptions, "size");
+  const materialOptions = [
+    ...groupOptions(printOptions, "material_size"),
+    ...groupOptions(printOptions, "paper"),
+    ...groupOptions(printOptions, "size")
+  ];
+  const vendorOptions = groupOptions(printOptions, "vendor");
   const rushOptions = groupOptions(printOptions, "rush");
   const cuttingOptions = groupOptions(printOptions, "cutting");
 
@@ -103,6 +110,9 @@ export function DmEditor({ teamId, template, contacts, printOptions }: DmEditorP
   });
   const watched = form.watch();
   const selectedContact = contacts.find((contact) => contact.id === watched.contactId) ?? null;
+  const printTargets = batchRows.length
+    ? batchRows.map((row) => ({ id: row.id, label: row.label }))
+    : [{ id: "single", label: selectedContact?.name ?? "單筆 DM" }];
 
   useEffect(() => {
     const raw = localStorage.getItem(getStorageKey(teamId, template.id));
@@ -192,6 +202,9 @@ export function DmEditor({ teamId, template, contacts, printOptions }: DmEditorP
       const png = stage.toDataURL({ mimeType: "image/png", pixelRatio: 2 });
       const jpg = stage.toDataURL({ mimeType: "image/jpeg", quality: 0.92, pixelRatio: 2 });
       const pdf = dataUrlToPdfDataUrl(png, template);
+      const saveKey = crypto.randomUUID();
+      localStorage.setItem(`jifu-save-image:${saveKey}`, JSON.stringify({ png, jpg, pdf, name: template.name }));
+      setGenerated({ png, jpg, pdf, saveKey });
       return { png, jpg, pdf };
     } catch {
       throw new Error("下載失敗。若使用外部圖片網址，請改用手動上傳圖片後再試一次。");
@@ -213,34 +226,53 @@ export function DmEditor({ teamId, template, contacts, printOptions }: DmEditorP
   }
 
   function handlePrintSubmit(formData: FormData) {
+    setConfirmingPrint(formData);
+  }
+
+  function confirmPrintSubmit() {
+    const formData = confirmingPrint;
+    if (!formData) return;
     startTransition(async () => {
       try {
         setMessage("正在送出印刷需求...");
         const exports = await createExports();
-        const requestPayload = {
-          id: crypto.randomUUID(),
+        const batchItems = printTargets.map((target) => {
+          const quantity = Number(formData.get(`quantity_${target.id}`) ?? formData.get("print_quantity") ?? 0) || 0;
+          const contactId = String(formData.get(`contact_${target.id}`) ?? selectedContact?.id ?? "");
+          const contact = contacts.find((item) => item.id === contactId) ?? selectedContact;
+          return {
+            id: target.id,
+            contactId: contact?.id ?? null,
+            contactName: contact?.name ?? target.label,
+            quantity,
+            materialSize: String(formData.get(`material_${target.id}`) ?? formData.get("material_size") ?? ""),
+            vendor: String(formData.get(`vendor_${target.id}`) ?? formData.get("vendor") ?? ""),
+            label: target.label
+          };
+        });
+        const totalQuantity = batchItems.reduce((sum, item) => sum + item.quantity, 0);
+        const result = await submitPrintRequestAction({
           teamId,
           templateId: template.id,
           contactId: selectedContact?.id ?? null,
-          printQuantity: String(formData.get("print_quantity") ?? ""),
-          paper: String(formData.get("paper") ?? ""),
-          size: String(formData.get("size") ?? ""),
+          pngDataUrl: exports.png,
+          jpgDataUrl: exports.jpg,
+          pdfDataUrl: exports.pdf,
+          printQuantity: String(totalQuantity),
+          materialSize: batchItems.map((item) => item.materialSize).filter(Boolean).join("、"),
+          vendor: batchItems.map((item) => item.vendor).filter(Boolean).join("、"),
+          totalQuantity,
+          batchItems,
           isRush: formData.get("is_rush") === "yes",
           isCutting: formData.get("is_cutting") === "yes",
           message: String(formData.get("message") ?? ""),
-          createdAt: new Date().toISOString(),
-          files: {
-            png: exports.png,
-            jpg: exports.jpg,
-            pdf: exports.pdf
-          },
           payload: {
             values: form.getValues("values"),
             batchRow: batchRows[batchIndex] ?? null
           }
-        };
-        localStorage.setItem(`jifu-print-request:${requestPayload.id}`, JSON.stringify(requestPayload));
-        setMessage("GitHub Pages 是靜態展示環境，印刷需求已暫存在這台電腦；正式送印需部署到可連接 Supabase 的環境。");
+        });
+        setConfirmingPrint(null);
+        setMessage(result.message);
       } catch (error) {
         setMessage(error instanceof Error ? error.message : "送出失敗，請再試一次。");
       }
@@ -376,6 +408,16 @@ export function DmEditor({ teamId, template, contacts, printOptions }: DmEditorP
               下載 PDF
             </button>
           </div>
+          {generated ? (
+            <div className="mt-5 rounded-lg border border-line bg-slate-50 p-4">
+              <p className="text-base font-bold text-navy-900">手機或 LINE 無法下載時，請長按下方圖片儲存。</p>
+              {/* eslint-disable-next-line @next/next/no-img-element */}
+              <img src={generated.png} alt="可長按儲存的 DM 圖片" className="mt-3 w-full rounded-lg border border-line bg-white" />
+              <a className="btn btn-primary mt-4 w-full" href={`/save?key=${generated.saveKey}`} target="_blank" rel="noreferrer">
+                開啟專用儲存頁
+              </a>
+            </div>
+          ) : null}
         </div>
 
         <div className="card p-5">
@@ -396,39 +438,54 @@ export function DmEditor({ teamId, template, contacts, printOptions }: DmEditorP
                 event.preventDefault();
                 handlePrintSubmit(new FormData(event.currentTarget));
               }}
-              className="mt-5 grid gap-4 sm:grid-cols-2"
+              className="mt-5 grid gap-4"
             >
-              <label>
-                <span className="field-label">印刷數量</span>
-                <select name="print_quantity" required>
-                  {quantityOptions.map((option) => (
-                    <option key={option.id} value={option.value}>
-                      {option.label}
-                    </option>
-                  ))}
-                </select>
-              </label>
-              <label>
-                <span className="field-label">紙張材質</span>
-                <select name="paper" required>
-                  {paperOptions.map((option) => (
-                    <option key={option.id} value={option.value}>
-                      {option.label}
-                    </option>
-                  ))}
-                </select>
-              </label>
-              <label>
-                <span className="field-label">尺寸</span>
-                <select name="size" required>
-                  {sizeOptions.map((option) => (
-                    <option key={option.id} value={option.value}>
-                      {option.label}
-                    </option>
-                  ))}
-                </select>
-              </label>
-              <label>
+              {printTargets.map((target) => (
+                <div key={target.id} className="grid gap-3 rounded-lg border border-line bg-slate-50 p-3 sm:grid-cols-4">
+                  <p className="font-black text-navy-900 sm:col-span-4">{target.label}</p>
+                  <label>
+                    <span className="field-label">業務</span>
+                    <select name={`contact_${target.id}`} defaultValue={selectedContact?.id ?? ""} required>
+                      {contacts.map((contact) => (
+                        <option key={contact.id} value={contact.id}>
+                          {contact.name}
+                        </option>
+                      ))}
+                    </select>
+                  </label>
+                  <label>
+                    <span className="field-label">數量</span>
+                    <select name={`quantity_${target.id}`} required>
+                      {quantityOptions.length ? quantityOptions.map((option) => (
+                        <option key={option.id} value={option.value}>
+                          {option.value}
+                        </option>
+                      )) : <option value="1">1</option>}
+                    </select>
+                  </label>
+                  <label>
+                    <span className="field-label">材質尺寸</span>
+                    <select name={`material_${target.id}`} required>
+                      {materialOptions.length ? materialOptions.map((option) => (
+                        <option key={option.id} value={option.value}>
+                          {option.label}
+                        </option>
+                      )) : <option value="未指定">未指定</option>}
+                    </select>
+                  </label>
+                  <label>
+                    <span className="field-label">廠商</span>
+                    <select name={`vendor_${target.id}`}>
+                      {vendorOptions.length ? vendorOptions.map((option) => (
+                        <option key={option.id} value={option.value}>
+                          {option.vendor || option.label}
+                        </option>
+                      )) : <option value="未指定">未指定</option>}
+                    </select>
+                  </label>
+                </div>
+              ))}
+              <label className="sm:col-span-2">
                 <span className="field-label">是否急件</span>
                 <select name="is_rush">
                   <option value="no">一般件</option>
@@ -439,7 +496,7 @@ export function DmEditor({ teamId, template, contacts, printOptions }: DmEditorP
                   ))}
                 </select>
               </label>
-              <label>
+              <label className="sm:col-span-2">
                 <span className="field-label">是否裁切</span>
                 <select name="is_cutting">
                   <option value="no">不裁切</option>
@@ -464,6 +521,27 @@ export function DmEditor({ teamId, template, contacts, printOptions }: DmEditorP
         </div>
 
         {message ? <div className="card border-blue-200 bg-blue-50 p-4 text-base font-bold text-navy-900">{message}</div> : null}
+        {confirmingPrint ? (
+          <div className="fixed inset-0 z-50 grid place-items-center bg-navy-900/70 p-4">
+            <div className="w-full max-w-lg rounded-lg bg-white p-6 shadow-tight">
+              <h2 className="text-2xl font-black text-navy-900">確認印刷需求</h2>
+              <p className="mt-4 text-lg leading-8 text-slate-700">
+                請確實核對您的編輯內容無誤，送出申請將視同正式提出印刷需求，將由專人聯繫您核對。
+              </p>
+              <div className="mt-6 grid gap-3 sm:grid-cols-3">
+                <button type="button" className="btn btn-secondary" onClick={() => setConfirmingPrint(null)}>
+                  回上一頁
+                </button>
+                <button type="button" className="btn btn-blue" onClick={confirmPrintSubmit} disabled={isPending}>
+                  確認申請
+                </button>
+                <button type="button" className="btn btn-danger" onClick={() => setConfirmingPrint(null)}>
+                  取消申請
+                </button>
+              </div>
+            </div>
+          </div>
+        ) : null}
       </section>
     </div>
   );

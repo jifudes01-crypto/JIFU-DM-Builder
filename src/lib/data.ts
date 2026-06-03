@@ -40,6 +40,15 @@ export const listTeams = cache(async (): Promise<Team[]> => {
   return data ?? [];
 });
 
+export const listAdminTeams = cache(async (): Promise<Team[]> => {
+  if (!isSupabaseConfigured()) return demoTeams;
+  const supabase = createSupabaseAdminClient();
+  const { data, error } = await supabase.from("teams").select("*").order("sort_order").order("name");
+
+  if (error) throw error;
+  return data ?? [];
+});
+
 export const getTeam = cache(async (teamId: string): Promise<Team | null> => {
   const teams = await listTeams();
   return teams.find((team) => team.id === teamId) ?? null;
@@ -140,9 +149,7 @@ export const listPrintRequests = cache(async (): Promise<PrintRequest[]> => {
   const supabase = createSupabaseAdminClient();
   const { data, error } = await supabase
     .from("print_requests")
-    .select(
-      "*, teams(name), templates(name), contacts(name, mobile)"
-    )
+    .select("*, teams(name), templates(name), contacts(name, mobile)")
     .order("created_at", { ascending: false });
 
   if (error) throw error;

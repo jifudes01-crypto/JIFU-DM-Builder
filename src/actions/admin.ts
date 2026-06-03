@@ -42,6 +42,15 @@ function safeFileName(name: string) {
   return name.replace(/[^\w.-]+/g, "-").replace(/-+/g, "-").toLowerCase();
 }
 
+function slugValue(value: string) {
+  const slug = value
+    .trim()
+    .toLowerCase()
+    .replace(/[^\p{L}\p{N}]+/gu, "-")
+    .replace(/^-+|-+$/g, "");
+  return slug || crypto.randomUUID();
+}
+
 async function uploadFile(bucket: string, file: File, folder: string) {
   const supabase = createSupabaseAdminClient();
   const ext = file.name.split(".").pop() || "bin";
@@ -95,6 +104,92 @@ export async function createTemplateAction(formData: FormData) {
   if (error) throw error;
   revalidatePath("/admin/templates");
   revalidatePath("/templates");
+}
+
+export async function createTeamAction(formData: FormData) {
+  assertSupabaseReady();
+  const name = textValue(formData, "name");
+  const supabase = createSupabaseAdminClient();
+  const { error } = await supabase.from("teams").insert({
+    name,
+    description: textValue(formData, "description") || null,
+    slug: slugValue(textValue(formData, "slug", name)),
+    sort_order: numberValue(formData, "sort_order", 100),
+    is_active: formData.get("is_active") !== "off"
+  });
+  if (error) throw error;
+  revalidatePath("/");
+  revalidatePath("/admin/teams");
+}
+
+export async function updateTeamAction(formData: FormData) {
+  assertSupabaseReady();
+  const teamId = textValue(formData, "team_id");
+  const name = textValue(formData, "name");
+  const supabase = createSupabaseAdminClient();
+  const { error } = await supabase
+    .from("teams")
+    .update({
+      name,
+      description: textValue(formData, "description") || null,
+      slug: slugValue(textValue(formData, "slug", name)),
+      sort_order: numberValue(formData, "sort_order", 100)
+    })
+    .eq("id", teamId);
+  if (error) throw error;
+  revalidatePath("/");
+  revalidatePath("/admin/teams");
+}
+
+export async function updateTeamStatusAction(formData: FormData) {
+  assertSupabaseReady();
+  const supabase = createSupabaseAdminClient();
+  const { error } = await supabase
+    .from("teams")
+    .update({ is_active: formData.get("is_active") === "true" })
+    .eq("id", textValue(formData, "team_id"));
+  if (error) throw error;
+  revalidatePath("/");
+  revalidatePath("/admin/teams");
+}
+
+export async function deleteTeamAction(formData: FormData) {
+  assertSupabaseReady();
+  const supabase = createSupabaseAdminClient();
+  const { error } = await supabase.from("teams").delete().eq("id", textValue(formData, "team_id"));
+  if (error) throw error;
+  revalidatePath("/");
+  revalidatePath("/admin/teams");
+}
+
+export async function importTeamsAction(formData: FormData) {
+  assertSupabaseReady();
+  const teams = z
+    .array(
+      z.object({
+        name: z.string().min(1),
+        description: z.string().optional(),
+        sort_order: z.number().optional(),
+        is_active: z.boolean().optional()
+      })
+    )
+    .parse(JSON.parse(textValue(formData, "teams_json", "[]")));
+
+  if (!teams.length) return;
+  const supabase = createSupabaseAdminClient();
+  const { error } = await supabase.from("teams").upsert(
+    teams.map((team, index) => ({
+      name: team.name,
+      description: team.description || null,
+      slug: slugValue(team.name),
+      sort_order: team.sort_order ?? index + 1,
+      is_active: team.is_active ?? true
+    })),
+    { onConflict: "slug" }
+  );
+  if (error) throw error;
+  revalidatePath("/");
+  revalidatePath("/admin/teams");
 }
 
 export async function updateTemplateAction(formData: FormData) {
@@ -350,6 +445,7 @@ export async function createPrintOptionAction(formData: FormData) {
     type: textValue(formData, "type"),
     label: textValue(formData, "label"),
     value: textValue(formData, "value"),
+    vendor: textValue(formData, "vendor") || null,
     sort_order: numberValue(formData, "sort_order", 100),
     is_active: formData.get("is_active") !== "off"
   });

@@ -3,9 +3,11 @@ node_modules
 out
 dist
 .tools
+.remote-work
 tsconfig.tsbuildinfo
 .env
 .env.local
 .env.*.local
 *.log
 *.zip
+*.patch

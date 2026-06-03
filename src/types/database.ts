@@ -17,12 +17,13 @@ export type BlockType =
 export type TextAlign = "left" | "center" | "right";
 export type ImageFit = "cover" | "contain";
 export type PrintStatus = "pending" | "processing" | "sent" | "completed" | "cancelled";
-export type PrintOptionType = "quantity" | "paper" | "size" | "rush" | "cutting";
+export type PrintOptionType = "quantity" | "material_size" | "vendor" | "rush" | "cutting" | "paper" | "size";
 export type ExportFormat = "png" | "jpg" | "pdf";
 
 export interface Team {
   id: string;
   name: string;
+  description: string | null;
   slug: string;
   is_active: boolean;
   sort_order: number;
@@ -90,6 +91,7 @@ export interface PrintOption {
   type: PrintOptionType;
   label: string;
   value: string;
+  vendor: string | null;
   sort_order: number;
   is_active: boolean;
   created_at?: string;
@@ -121,6 +123,10 @@ export interface PrintRequest {
   print_quantity: string | null;
   paper: string | null;
   size: string | null;
+  total_quantity: number;
+  material_summary: string | null;
+  vendor: string | null;
+  batch_items: PrintRequestBatchItem[];
   is_rush: boolean;
   is_cutting: boolean;
   message: string | null;
@@ -132,6 +138,20 @@ export interface PrintRequest {
   teams?: Pick<Team, "name"> | null;
   templates?: Pick<Template, "name"> | null;
   contacts?: Pick<Contact, "name" | "mobile"> | null;
+}
+
+export interface PrintRequestBatchItem {
+  id: string;
+  contactId: string | null;
+  contactName: string;
+  quantity: number;
+  materialSize: string;
+  vendor: string;
+  previewUrl?: string;
+  pngUrl?: string;
+  jpgUrl?: string;
+  pdfUrl?: string;
+  label?: string;
 }
 
 export interface TemplateWithBlocks extends Template {

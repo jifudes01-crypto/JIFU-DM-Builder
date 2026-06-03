@@ -6,22 +6,7 @@ import type {
   TemplateWithBlocks
 } from "@/types/database";
 
-export const demoTeams: Team[] = [
-  {
-    id: "demo-team-main",
-    name: "台北一部",
-    slug: "taipei-1",
-    is_active: true,
-    sort_order: 1
-  },
-  {
-    id: "demo-team-luxury",
-    name: "豪宅事業部",
-    slug: "luxury",
-    is_active: true,
-    sort_order: 2
-  }
-];
+export const demoTeams: Team[] = [];
 
 export const demoTemplates: TemplateWithBlocks[] = [
   {
@@ -196,13 +181,13 @@ export const demoContacts: Contact[] = [
 ];
 
 export const demoPrintOptions: PrintOption[] = [
-  { id: "po-quantity-100", type: "quantity", label: "100 份", value: "100", sort_order: 1, is_active: true },
-  { id: "po-quantity-300", type: "quantity", label: "300 份", value: "300", sort_order: 2, is_active: true },
-  { id: "po-paper-art", type: "paper", label: "銅版紙", value: "銅版紙", sort_order: 1, is_active: true },
-  { id: "po-paper-matte", type: "paper", label: "霧面紙", value: "霧面紙", sort_order: 2, is_active: true },
-  { id: "po-size-a4", type: "size", label: "A4", value: "A4", sort_order: 1, is_active: true },
-  { id: "po-rush-yes", type: "rush", label: "急件", value: "yes", sort_order: 1, is_active: true },
-  { id: "po-cut-yes", type: "cutting", label: "需要裁切", value: "yes", sort_order: 1, is_active: true }
+  { id: "po-quantity-100", type: "quantity", label: "一般印量", value: "100", vendor: null, sort_order: 1, is_active: true },
+  { id: "po-quantity-300", type: "quantity", label: "一般印量", value: "300", vendor: null, sort_order: 2, is_active: true },
+  { id: "po-material-a4", type: "material_size", label: "銅版紙 A4", value: "銅版紙 A4", vendor: null, sort_order: 1, is_active: true },
+  { id: "po-material-matte-a4", type: "material_size", label: "霧面紙 A4", value: "霧面紙 A4", vendor: null, sort_order: 2, is_active: true },
+  { id: "po-vendor-default", type: "vendor", label: "預設廠商", value: "預設廠商", vendor: "預設廠商", sort_order: 1, is_active: true },
+  { id: "po-rush-yes", type: "rush", label: "急件", value: "yes", vendor: null, sort_order: 1, is_active: true },
+  { id: "po-cut-yes", type: "cutting", label: "需要裁切", value: "yes", vendor: null, sort_order: 1, is_active: true }
 ];
 
 export const demoPrintRequests: PrintRequest[] = [];

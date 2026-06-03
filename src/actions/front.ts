@@ -14,8 +14,22 @@ const printRequestSchema = z.object({
   jpgDataUrl: dataUrlSchema,
   pdfDataUrl: dataUrlSchema,
   printQuantity: z.string().optional(),
-  paper: z.string().optional(),
-  size: z.string().optional(),
+  materialSize: z.string().optional(),
+  vendor: z.string().optional(),
+  totalQuantity: z.number().default(0),
+  batchItems: z
+    .array(
+      z.object({
+        id: z.string(),
+        contactId: z.string().nullable(),
+        contactName: z.string(),
+        quantity: z.number(),
+        materialSize: z.string(),
+        vendor: z.string(),
+        label: z.string().optional()
+      })
+    )
+    .default([]),
   isRush: z.boolean(),
   isCutting: z.boolean(),
   message: z.string().optional(),
@@ -112,8 +126,18 @@ export async function submitPrintRequestAction(rawPayload: SubmitPrintRequestPay
       jpg_url: jpgUrl,
       pdf_url: pdfUrl,
       print_quantity: payload.printQuantity || null,
-      paper: payload.paper || null,
-      size: payload.size || null,
+      paper: payload.materialSize || null,
+      size: payload.materialSize || null,
+      total_quantity: payload.totalQuantity || Number(payload.printQuantity || 0) || 0,
+      material_summary: payload.materialSize || null,
+      vendor: payload.vendor || null,
+      batch_items: payload.batchItems.map((item) => ({
+        ...item,
+        previewUrl: pngUrl,
+        pngUrl,
+        jpgUrl,
+        pdfUrl
+      })),
       is_rush: payload.isRush,
       is_cutting: payload.isCutting,
       message: payload.message || null,

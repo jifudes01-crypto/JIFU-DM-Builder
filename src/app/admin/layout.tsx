@@ -3,6 +3,7 @@ import type { ReactNode } from "react";
 
 const links = [
   { href: "/admin", label: "總覽" },
+  { href: "/admin/teams", label: "團隊管理" },
   { href: "/admin/templates", label: "模板管理" },
   { href: "/admin/contacts", label: "通訊錄" },
   { href: "/admin/print-options", label: "印刷選項" },

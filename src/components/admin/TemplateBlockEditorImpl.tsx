@@ -3,6 +3,7 @@
 import { useEffect, useRef, useState, useTransition } from "react";
 import { Image as KonvaImage, Layer, Rect, Stage, Text, Transformer } from "react-konva";
 import type Konva from "konva";
+import { saveTemplateBlocksAction } from "@/actions/admin";
 import type { TemplateBlockEditorProps } from "@/types/component-props";
 import type { BlockType, TemplateBlock } from "@/types/database";
 
@@ -20,6 +21,21 @@ const blockTypes: BlockType[] = [
   "qrcode",
   "logo"
 ];
+
+const blockTypeLabels: Record<BlockType, string> = {
+  text: "文字",
+  title: "主標題",
+  subtitle: "副標題",
+  body: "內文",
+  price: "價格",
+  address: "地址",
+  feature: "特色",
+  image: "圖片",
+  avatar: "頭像",
+  contact: "聯絡資訊",
+  qrcode: "QR Code",
+  logo: "Logo"
+};
 
 function useLoadedImage(src: string) {
   const [image, setImage] = useState<HTMLImageElement | null>(null);
@@ -83,7 +99,7 @@ export function TemplateBlockEditor({ template }: TemplateBlockEditorProps) {
   }
 
   function addBlock(type: BlockType) {
-    const block = { ...createBlock(template.id, blocks.length), type, label: type === "image" ? "圖片" : "文字" };
+    const block = { ...createBlock(template.id, blocks.length), type, label: blockTypeLabels[type] };
     setBlocks((current) => [...current, block]);
     setSelectedId(block.id);
     syncTransformer(block.id);
@@ -98,12 +114,12 @@ export function TemplateBlockEditor({ template }: TemplateBlockEditorProps) {
   function save() {
     startTransition(async () => {
       try {
-        setMessage("正在暫存區塊...");
-        localStorage.setItem(
-          `jifu-template-blocks:${template.id}`,
-          JSON.stringify(blocks.map((block, index) => ({ ...block, z_index: index + 1 })))
+        setMessage("正在儲存區塊...");
+        await saveTemplateBlocksAction(
+          template.id,
+          blocks.map((block, index) => ({ ...block, z_index: index + 1 }))
         );
-        setMessage("GitHub Pages 是靜態展示環境，區塊已暫存在這台電腦；正式儲存需部署到可連接 Supabase 的環境。");
+        setMessage("區塊已儲存，前台會讀取最新設定。");
       } catch (error) {
         setMessage(error instanceof Error ? error.message : "儲存失敗，請稍後再試。");
       }
@@ -116,7 +132,7 @@ export function TemplateBlockEditor({ template }: TemplateBlockEditorProps) {
         <div className="mb-4 flex flex-wrap gap-2">
           {blockTypes.map((type) => (
             <button key={type} type="button" className="btn btn-secondary" onClick={() => addBlock(type)}>
-              新增 {type}
+              新增 {blockTypeLabels[type]}
             </button>
           ))}
         </div>
@@ -217,7 +233,7 @@ export function TemplateBlockEditor({ template }: TemplateBlockEditorProps) {
                 <select value={selectedBlock.type} onChange={(event) => updateSelected({ type: event.target.value as BlockType })}>
                   {blockTypes.map((type) => (
                     <option key={type} value={type}>
-                      {type}
+                      {blockTypeLabels[type]}
                     </option>
                   ))}
                 </select>
@@ -293,6 +309,43 @@ export function TemplateBlockEditor({ template }: TemplateBlockEditorProps) {
           ) : (
             <p className="section-subtitle">請點選畫布上的區塊，或新增一個區塊。</p>
           )}
+        </div>
+        <div className="card p-5">
+          <h2 className="text-xl font-black text-navy-900">同步預覽</h2>
+          <p className="section-subtitle">這裡會同步顯示目前區塊位置，不必跳到前台查看。</p>
+          <div className="mt-4 overflow-auto rounded-lg border border-line bg-slate-100 p-3">
+            <div style={{ width: template.width * Math.min(0.34, 320 / template.width), height: template.height * Math.min(0.34, 320 / template.width) }}>
+              <Stage
+                width={template.width}
+                height={template.height}
+                style={{
+                  transform: `scale(${Math.min(0.34, 320 / template.width)})`,
+                  transformOrigin: "top left"
+                }}
+              >
+                <Layer>
+                  <Rect x={0} y={0} width={template.width} height={template.height} fill="#ffffff" />
+                  {background ? <KonvaImage image={background} x={0} y={0} width={template.width} height={template.height} /> : null}
+                  {blocks.map((block) => (
+                    <Rect
+                      key={`preview-${block.id}`}
+                      x={block.x}
+                      y={block.y}
+                      width={block.width}
+                      height={block.height}
+                      fill="rgba(45, 140, 255, 0.14)"
+                      stroke="#2d8cff"
+                      strokeWidth={2}
+                      dash={[10, 8]}
+                    />
+                  ))}
+                  {blocks.map((block) => (
+                    <Text key={`preview-label-${block.id}`} x={block.x + 8} y={block.y + 8} text={block.label} fontSize={16} fill="#0f2a44" />
+                  ))}
+                </Layer>
+              </Stage>
+            </div>
+          </div>
         </div>
         <button type="button" className="btn btn-blue w-full" onClick={save} disabled={isPending}>
           {isPending ? "儲存中..." : "儲存全部區塊"}
