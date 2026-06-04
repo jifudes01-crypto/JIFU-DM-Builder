@@ -64,6 +64,9 @@ export function AdminCodeGate({ children }: AdminCodeGateProps) {
         <p className="eyebrow">管理後台</p>
         <h1 className="section-title">請輸入管理代碼</h1>
         <p className="section-subtitle">代碼正確後，這台裝置會記住狀態，下次可直接進入。</p>
+        <p className="mt-3 rounded-lg bg-slate-50 px-4 py-2 text-base font-bold text-slate-600">
+          目前版本：代碼登入
+        </p>
         <form className="mt-5 max-w-xl space-y-4" onSubmit={handleSubmit}>
           <label className="block">
             <span className="form-label">管理代碼</span>
