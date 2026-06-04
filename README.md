@@ -48,6 +48,28 @@ GitHub Pages 網址：
 https://jifudes01-crypto.github.io/JIFU-DM-Builder/
 ```
 
+請先到 GitHub repository 的 `Settings > Secrets and variables > Actions` 新增：
+
+- `NEXT_PUBLIC_SUPABASE_URL`
+- `NEXT_PUBLIC_SUPABASE_ANON_KEY`
+
+GitHub Pages 不能使用 `SUPABASE_SERVICE_ROLE_KEY`，後台管理改由 Google 登入 + Supabase RLS 控制。
+
+## Google 管理員登入
+
+1. 到 Supabase Dashboard 啟用 `Authentication > Providers > Google`。
+2. Site URL 設為 `https://jifudes01-crypto.github.io`。
+3. Redirect URL 加入 `https://jifudes01-crypto.github.io/JIFU-DM-Builder/admin/`。
+4. 使用 Google 登入後，到 Supabase `auth.users` 找到該帳號。
+5. 將該帳號加入 `admin_users`：
+
+```sql
+insert into admin_users (user_id, email, is_active)
+values ('auth.users 的 id', '你的 Google Email', true);
+```
+
+只有 `admin_users.is_active = true` 的帳號可以操作後台。
+
 ## 前台流程
 
 1. 選擇 `DM 製作`
@@ -72,7 +94,7 @@ https://jifudes01-crypto.github.io/JIFU-DM-Builder/
 
 GitHub Pages 是靜態網站，無法執行 Next.js server actions，也不能安全使用 Supabase service role。
 
-因此目前 GitHub Pages 版的新增、編輯、送印會在畫面中提示「靜態網站不會直接寫入資料」，前台送印資料可先暫存在使用者裝置。若之後要跨裝置即時同步後台資料，需要補上 Supabase 前端 RLS 寫入規則，或改用支援後端 runtime 的平台。
+目前 GitHub Pages 版已改用 Supabase Browser Client。前台公開讀取資料與送出印刷需求，後台需 Google 管理員登入後才能新增、編輯、刪除資料。
 
 ## 常用指令
 

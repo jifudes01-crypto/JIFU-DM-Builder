@@ -15,7 +15,7 @@ export default async function ContactsPage() {
 
       <ContactsImportForm teams={teams} />
 
-      <StaticForm encType="multipart/form-data" className="card grid gap-4 p-5 lg:grid-cols-3">
+      <StaticForm operation="create-contact" encType="multipart/form-data" className="card grid gap-4 p-5 lg:grid-cols-3">
         <label>
           <span className="field-label">姓名</span>
           <input name="name" required />
@@ -98,7 +98,7 @@ export default async function ContactsPage() {
                   <td>{contact.is_active ? "啟用" : "停用"}</td>
                   <td>
                     <div className="flex flex-wrap gap-2">
-                      <StaticForm>
+                      <StaticForm operation="contact-status">
                         <input type="hidden" name="contact_id" value={contact.id} />
                         <input type="hidden" name="is_active" value={contact.is_active ? "false" : "true"} />
                         <button type="submit" className="btn btn-secondary">
@@ -109,6 +109,7 @@ export default async function ContactsPage() {
                     <details className="mt-3">
                       <summary className="cursor-pointer text-base font-bold text-action">編輯人員</summary>
                       <StaticForm
+                        operation="update-contact"
                         encType="multipart/form-data"
                         className="mt-3 grid gap-3 rounded-lg border border-line bg-slate-50 p-3 md:grid-cols-2"
                       >

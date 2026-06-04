@@ -12,7 +12,7 @@ export default async function PrintOptionsPage() {
         <p className="section-subtitle">這些選項會顯示在前台「需要印刷」表單中。</p>
       </div>
 
-      <StaticForm className="card grid gap-4 p-5 md:grid-cols-5">
+      <StaticForm operation="create-print-option" className="card grid gap-4 p-5 md:grid-cols-5">
         <label>
           <span className="field-label">類別</span>
           <select name="type">
@@ -75,7 +75,7 @@ export default async function PrintOptionsPage() {
                 <td>{option.vendor ?? "-"}</td>
                 <td>{option.is_active ? "啟用" : "停用"}</td>
                 <td>
-                  <StaticForm>
+                  <StaticForm operation="print-option-status">
                     <input type="hidden" name="option_id" value={option.id} />
                     <input type="hidden" name="is_active" value={option.is_active ? "false" : "true"} />
                     <button type="submit" className="btn btn-secondary">

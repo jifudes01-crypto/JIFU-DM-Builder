@@ -15,7 +15,7 @@ export default async function TeamsPage() {
 
       <TeamsImportForm />
 
-      <StaticForm className="card grid gap-4 p-5 md:grid-cols-4">
+      <StaticForm operation="create-team" className="card grid gap-4 p-5 md:grid-cols-4">
         <label>
           <span className="field-label">團隊名稱</span>
           <input name="name" required />
@@ -55,14 +55,14 @@ export default async function TeamsPage() {
                 <td>{team.is_active ? "啟用" : "停用"}</td>
                 <td>
                   <div className="flex flex-wrap gap-2">
-                    <StaticForm>
+                    <StaticForm operation="team-status">
                       <input type="hidden" name="team_id" value={team.id} />
                       <input type="hidden" name="is_active" value={team.is_active ? "false" : "true"} />
                       <button type="submit" className="btn btn-secondary">
                         {team.is_active ? "停用" : "啟用"}
                       </button>
                     </StaticForm>
-                    <StaticForm>
+                    <StaticForm operation="delete-team">
                       <input type="hidden" name="team_id" value={team.id} />
                       <button type="submit" className="btn btn-danger">
                         刪除
@@ -71,7 +71,7 @@ export default async function TeamsPage() {
                   </div>
                   <details className="mt-3">
                     <summary className="cursor-pointer text-base font-bold text-action">編輯團隊</summary>
-                    <StaticForm className="mt-3 grid gap-3 rounded-lg border border-line bg-slate-50 p-3 md:grid-cols-2">
+                    <StaticForm operation="update-team" className="mt-3 grid gap-3 rounded-lg border border-line bg-slate-50 p-3 md:grid-cols-2">
                       <input type="hidden" name="team_id" value={team.id} />
                       <label>
                         <span className="field-label">團隊名稱</span>

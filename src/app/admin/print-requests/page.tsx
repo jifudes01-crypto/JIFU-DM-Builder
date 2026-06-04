@@ -120,7 +120,7 @@ export default async function PrintRequestsPage() {
                   ) : null}
                 </div>
               </div>
-              <StaticForm className="grid content-start gap-4">
+              <StaticForm operation="print-request-status" className="grid content-start gap-4">
                 <input type="hidden" name="request_id" value={request.id} />
                 <label>
                   <span className="field-label">處理狀態</span>

@@ -2,6 +2,7 @@
 
 import Link from "next/link";
 import { useEffect, useState } from "react";
+import { loadPublicWorkspaceData } from "@/lib/supabase-public-data";
 import type { Contact, PrintOption, PrintRequest, Team, Template } from "@/types/database";
 
 interface UnifiedWorkspaceClientProps {
@@ -14,10 +15,17 @@ interface UnifiedWorkspaceClientProps {
 
 export function UnifiedWorkspaceClient({ teams, templates, contacts, printOptions, printRequests }: UnifiedWorkspaceClientProps) {
   const [tab, setTab] = useState<"front" | "admin">("front");
+  const [data, setData] = useState({ teams, templates, contacts, printOptions, printRequests });
+  const [message, setMessage] = useState("");
 
   useEffect(() => {
     const saved = localStorage.getItem("jifu-workspace-tab");
     if (saved === "front" || saved === "admin") setTab(saved);
+    loadPublicWorkspaceData()
+      .then((remoteData) => {
+        if (remoteData) setData(remoteData);
+      })
+      .catch((error) => setMessage(error instanceof Error ? error.message : "讀取 Supabase 資料失敗。"));
   }, []);
 
   function chooseTab(nextTab: "front" | "admin") {
@@ -26,11 +34,11 @@ export function UnifiedWorkspaceClient({ teams, templates, contacts, printOption
   }
 
   const adminCards = [
-    { label: "團隊", value: teams.length, href: "/admin/teams" },
-    { label: "模板", value: templates.length, href: "/admin/templates" },
-    { label: "通訊錄", value: contacts.length, href: "/admin/contacts" },
-    { label: "印刷選項", value: printOptions.length, href: "/admin/print-options" },
-    { label: "待處理印刷需求", value: printRequests.filter((request) => request.status === "pending").length, href: "/admin/print-requests" }
+    { label: "團隊", value: data.teams.length, href: "/admin/teams" },
+    { label: "模板", value: data.templates.length, href: "/admin/templates" },
+    { label: "通訊錄", value: data.contacts.length, href: "/admin/contacts" },
+    { label: "印刷選項", value: data.printOptions.length, href: "/admin/print-options" },
+    { label: "待處理印刷需求", value: data.printRequests.filter((request) => request.status === "pending").length, href: "/admin/print-requests" }
   ];
 
   return (
@@ -47,6 +55,7 @@ export function UnifiedWorkspaceClient({ teams, templates, contacts, printOption
           </button>
         </div>
       </section>
+      {message ? <div className="mb-6 rounded-lg bg-blue-50 p-4 font-bold text-navy-900">{message}</div> : null}
 
       {tab === "front" ? (
         <section>
@@ -55,9 +64,9 @@ export function UnifiedWorkspaceClient({ teams, templates, contacts, printOption
             <h2 className="section-title">選擇團隊</h2>
             <p className="section-subtitle">請依照團隊說明選擇這次要製作 DM 的團隊。</p>
           </div>
-          {teams.length ? (
+          {data.teams.length ? (
             <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
-              {teams.map((team) => (
+              {data.teams.map((team) => (
                 <Link key={team.id} href={`/templates?team=${team.id}`} className="step-card">
                   <span className="status-pill border-blue-200 bg-blue-50 text-navy-800">啟用中</span>
                   <h3 className="mt-4 text-2xl font-black text-navy-900">{team.name}</h3>

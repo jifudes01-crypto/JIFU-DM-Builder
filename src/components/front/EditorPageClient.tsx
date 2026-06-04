@@ -2,7 +2,9 @@
 
 import Link from "next/link";
 import { useSearchParams } from "next/navigation";
+import { useEffect, useState } from "react";
 import { DmEditorClient } from "@/components/front/DmEditorClient";
+import { loadEditorData } from "@/lib/supabase-public-data";
 import type { Contact, PrintOption, Team, TemplateWithBlocks } from "@/types/database";
 
 interface EditorPageClientProps {
@@ -14,11 +16,21 @@ interface EditorPageClientProps {
 
 export function EditorPageClient({ teams, templates, contacts, printOptions }: EditorPageClientProps) {
   const searchParams = useSearchParams();
+  const [data, setData] = useState({ teams, templates, contacts, printOptions });
+  const [message, setMessage] = useState("");
   const teamId = searchParams.get("team") ?? "";
   const templateId = searchParams.get("template") ?? "";
-  const team = teams.find((item) => item.id === teamId) ?? null;
-  const template = templates.find((item) => item.id === templateId && item.team_id === teamId) ?? null;
-  const visibleContacts = contacts.filter((contact) => contact.team_id === teamId && contact.is_active);
+  const team = data.teams.find((item) => item.id === teamId) ?? null;
+  const template = data.templates.find((item) => item.id === templateId && item.team_id === teamId) ?? null;
+  const visibleContacts = data.contacts.filter((contact) => contact.team_id === teamId && contact.is_active);
+
+  useEffect(() => {
+    loadEditorData()
+      .then((remoteData) => {
+        if (remoteData) setData(remoteData);
+      })
+      .catch((error) => setMessage(error instanceof Error ? error.message : "讀取 Supabase 編輯資料失敗。"));
+  }, []);
 
   if (!teamId || !templateId) {
     return (
@@ -58,7 +70,8 @@ export function EditorPageClient({ teams, templates, contacts, printOptions }: E
           回模板列表
         </Link>
       </div>
-      <DmEditorClient teamId={teamId} template={template} contacts={visibleContacts} printOptions={printOptions} />
+      {message ? <div className="mb-6 rounded-lg bg-blue-50 p-4 font-bold text-navy-900">{message}</div> : null}
+      <DmEditorClient teamId={teamId} template={template} contacts={visibleContacts} printOptions={data.printOptions} />
     </main>
   );
 }

@@ -39,7 +39,7 @@ export function TeamsImportForm() {
   }
 
   return (
-    <StaticForm className="card grid gap-4 p-5 md:grid-cols-[1fr_auto] md:items-end">
+    <StaticForm operation="import-teams" className="card grid gap-4 p-5 md:grid-cols-[1fr_auto] md:items-end">
       <input type="hidden" name="teams_json" value={JSON.stringify(rows)} />
       <label>
         <span className="field-label">匯入團隊 CSV / Excel</span>

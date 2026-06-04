@@ -2,6 +2,8 @@
 
 import Link from "next/link";
 import { useSearchParams } from "next/navigation";
+import { useEffect, useState } from "react";
+import { loadEditorData } from "@/lib/supabase-public-data";
 import type { Team, TemplateWithBlocks } from "@/types/database";
 
 interface TemplatesPageClientProps {
@@ -11,9 +13,19 @@ interface TemplatesPageClientProps {
 
 export function TemplatesPageClient({ teams, templates }: TemplatesPageClientProps) {
   const searchParams = useSearchParams();
+  const [data, setData] = useState({ teams, templates });
+  const [message, setMessage] = useState("");
   const teamId = searchParams.get("team") ?? "";
-  const team = teams.find((item) => item.id === teamId) ?? null;
-  const visibleTemplates = templates.filter((template) => template.team_id === teamId);
+  const team = data.teams.find((item) => item.id === teamId) ?? null;
+  const visibleTemplates = data.templates.filter((template) => template.team_id === teamId);
+
+  useEffect(() => {
+    loadEditorData()
+      .then((remoteData) => {
+        if (remoteData) setData({ teams: remoteData.teams, templates: remoteData.templates });
+      })
+      .catch((error) => setMessage(error instanceof Error ? error.message : "讀取 Supabase 模板失敗。"));
+  }, []);
 
   if (!teamId || !team) {
     return (
@@ -35,6 +47,7 @@ export function TemplatesPageClient({ teams, templates }: TemplatesPageClientPro
         <h1 className="section-title">選擇模板</h1>
         <p className="section-subtitle">{team.description || `${team.name} 目前只會顯示已上架且完成區塊設定的模板。`}</p>
       </section>
+      {message ? <div className="mb-6 rounded-lg bg-blue-50 p-4 font-bold text-navy-900">{message}</div> : null}
 
       {visibleTemplates.length ? (
         <section className="grid gap-4 md:grid-cols-2 xl:grid-cols-3">

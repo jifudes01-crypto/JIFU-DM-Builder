@@ -35,7 +35,7 @@ export function ContactsImportForm({ teams }: ContactsImportFormProps) {
   }
 
   return (
-    <StaticForm className="card grid gap-4 p-5 md:grid-cols-[1fr_1fr_auto] md:items-end">
+    <StaticForm operation="import-contacts" className="card grid gap-4 p-5 md:grid-cols-[1fr_1fr_auto] md:items-end">
       <label>
         <span className="field-label">匯入到團隊</span>
         <select name="team_id">

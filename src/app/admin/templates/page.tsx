@@ -13,7 +13,7 @@ export default async function AdminTemplatesPage() {
         <p className="section-subtitle">上架模板才會顯示在前台；沒有區塊設定的模板不能進入製作。</p>
       </div>
 
-      <StaticForm encType="multipart/form-data" className="card grid gap-4 p-5 lg:grid-cols-3">
+      <StaticForm operation="create-template" encType="multipart/form-data" className="card grid gap-4 p-5 lg:grid-cols-3">
         <label>
           <span className="field-label">模板名稱</span>
           <input name="name" required placeholder="每月精選 A4 直式" />
@@ -103,20 +103,20 @@ export default async function AdminTemplatesPage() {
                       <Link href={`/admin/templates/${template.id}/blocks`} className="btn btn-secondary">
                         設定區塊
                       </Link>
-                      <StaticForm>
+                      <StaticForm operation="template-status">
                         <input type="hidden" name="template_id" value={template.id} />
                         <input type="hidden" name="status" value={template.status === "published" ? "draft" : "published"} />
                         <button type="submit" className="btn btn-muted">
                           {template.status === "published" ? "下架" : "上架"}
                         </button>
                       </StaticForm>
-                      <StaticForm>
+                      <StaticForm operation="duplicate-template">
                         <input type="hidden" name="template_id" value={template.id} />
                         <button type="submit" className="btn btn-secondary">
                           複製
                         </button>
                       </StaticForm>
-                      <StaticForm>
+                      <StaticForm operation="delete-template">
                         <input type="hidden" name="template_id" value={template.id} />
                         <button type="submit" className="btn btn-danger">
                           刪除
@@ -126,6 +126,7 @@ export default async function AdminTemplatesPage() {
                     <details className="mt-3">
                       <summary className="cursor-pointer text-base font-bold text-action">編輯模板資料</summary>
                       <StaticForm
+                        operation="update-template"
                         encType="multipart/form-data"
                         className="mt-3 grid gap-3 rounded-lg border border-line bg-slate-50 p-3 md:grid-cols-2"
                       >

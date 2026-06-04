@@ -8,6 +8,7 @@ import * as XLSX from "xlsx";
 import { z } from "zod";
 import { ImageUploadField } from "@/components/front/ImageUploadField";
 import { TemplateCanvasPreview } from "@/components/front/TemplateCanvasPreview";
+import { createSupabaseBrowserClient, isBrowserSupabaseConfigured } from "@/lib/supabase-browser";
 import type { DmEditorProps, StageExportHandle } from "@/types/component-props";
 import type {
   BatchRow,
@@ -43,6 +44,23 @@ function dataUrlToPdfDataUrl(imageDataUrl: string, template: DmEditorProps["temp
   });
   pdf.addImage(imageDataUrl, "PNG", 0, 0, template.width, template.height);
   return pdf.output("datauristring");
+}
+
+function dataUrlToBlob(dataUrl: string) {
+  const [header, content] = dataUrl.split(",");
+  const mime = header.match(/data:(.*?);base64/)?.[1] ?? "application/octet-stream";
+  const binary = atob(content);
+  const bytes = new Uint8Array(binary.length);
+  for (let index = 0; index < binary.length; index += 1) bytes[index] = binary.charCodeAt(index);
+  return new Blob([bytes], { type: mime });
+}
+
+async function uploadExportFile(dataUrl: string, extension: "png" | "jpg" | "pdf") {
+  const supabase = createSupabaseBrowserClient();
+  const path = `exports/${crypto.randomUUID()}.${extension}`;
+  const { error } = await supabase.storage.from("dm-exports").upload(path, dataUrlToBlob(dataUrl), { upsert: false });
+  if (error) throw error;
+  return supabase.storage.from("dm-exports").getPublicUrl(path).data.publicUrl;
 }
 
 function createSchema(blocks: TemplateBlock[]) {
@@ -250,33 +268,54 @@ export function DmEditor({ teamId, template, contacts, printOptions }: DmEditorP
           };
         });
         const totalQuantity = batchItems.reduce((sum, item) => sum + item.quantity, 0);
-        const savedRequest = {
-          id: crypto.randomUUID(),
-          createdAt: new Date().toISOString(),
-          teamId,
-          templateId: template.id,
-          contactId: selectedContact?.id ?? null,
-          pngDataUrl: exports.png,
-          jpgDataUrl: exports.jpg,
-          pdfDataUrl: exports.pdf,
-          printQuantity: String(totalQuantity),
-          materialSize: batchItems.map((item) => item.materialSize).filter(Boolean).join("、"),
+        if (!isBrowserSupabaseConfigured()) {
+          throw new Error("尚未設定 Supabase，無法同步送出印刷需求。");
+        }
+        const [pngUrl, jpgUrl, pdfUrl] = await Promise.all([
+          uploadExportFile(exports.png, "png"),
+          uploadExportFile(exports.jpg, "jpg"),
+          uploadExportFile(exports.pdf, "pdf")
+        ]);
+        const supabase = createSupabaseBrowserClient();
+        const { data: exportRecord, error: exportError } = await supabase
+          .from("exports")
+          .insert({
+            team_id: teamId,
+            template_id: template.id,
+            contact_id: selectedContact?.id ?? null,
+            format: "png",
+            file_url: pngUrl,
+            preview_url: pngUrl,
+            payload: { values: form.getValues("values"), batchRow: batchRows[batchIndex] ?? null }
+          })
+          .select("id")
+          .single();
+        if (exportError) throw exportError;
+        const { error: requestError } = await supabase.from("print_requests").insert({
+          team_id: teamId,
+          template_id: template.id,
+          contact_id: selectedContact?.id ?? null,
+          export_id: exportRecord.id,
+          preview_url: pngUrl,
+          png_url: pngUrl,
+          jpg_url: jpgUrl,
+          pdf_url: pdfUrl,
+          print_quantity: String(totalQuantity),
+          paper: batchItems.map((item) => item.materialSize).filter(Boolean).join("、"),
+          size: batchItems.map((item) => item.materialSize).filter(Boolean).join("、"),
+          material_summary: batchItems.map((item) => item.materialSize).filter(Boolean).join("、"),
           vendor: batchItems.map((item) => item.vendor).filter(Boolean).join("、"),
-          totalQuantity,
-          batchItems,
-          isRush: formData.get("is_rush") === "yes",
-          isCutting: formData.get("is_cutting") === "yes",
+          total_quantity: totalQuantity,
+          batch_items: batchItems.map((item) => ({ ...item, previewUrl: pngUrl, pngUrl, jpgUrl, pdfUrl })),
+          is_rush: formData.get("is_rush") === "yes",
+          is_cutting: formData.get("is_cutting") === "yes",
           message: String(formData.get("message") ?? ""),
-          payload: {
-            values: form.getValues("values"),
-            batchRow: batchRows[batchIndex] ?? null
-          }
-        };
-        const rawRequests = localStorage.getItem("jifu-print-requests");
-        const requests = rawRequests ? JSON.parse(rawRequests) : [];
-        localStorage.setItem("jifu-print-requests", JSON.stringify([savedRequest, ...requests]));
+          status: "pending",
+          payload: { values: form.getValues("values"), batchRow: batchRows[batchIndex] ?? null }
+        });
+        if (requestError) throw requestError;
         setConfirmingPrint(null);
-        setMessage("印刷需求已在此裝置暫存。GitHub Pages 是靜態網站，正式同步後台需連接 Supabase 前端寫入權限。");
+        setMessage("印刷需求已同步送出，後台可跨裝置查看。");
       } catch (error) {
         setMessage(error instanceof Error ? error.message : "送出失敗，請再試一次。");
       }
