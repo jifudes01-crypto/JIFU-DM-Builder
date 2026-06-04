@@ -23,6 +23,16 @@ export function AdminAuthGate({ children }: AdminAuthGateProps) {
     const supabase = createSupabaseBrowserClient();
 
     async function loadSession() {
+      const code = new URLSearchParams(window.location.search).get("code");
+      if (code) {
+        const { error: exchangeError } = await supabase.auth.exchangeCodeForSession(code);
+        window.history.replaceState({}, document.title, window.location.pathname);
+        if (exchangeError) {
+          setMessage(`Google 登入導回失敗：${exchangeError.message}`);
+          setLoading(false);
+          return;
+        }
+      }
       const { data } = await supabase.auth.getSession();
       const nextUser = data.session?.user ?? null;
       setUser(nextUser);
@@ -86,6 +96,12 @@ export function AdminAuthGate({ children }: AdminAuthGateProps) {
         <button type="button" className="btn btn-blue mt-5" onClick={() => void signInWithGoogle()}>
           使用 Google 登入
         </button>
+        <div className="mt-5 rounded-lg border border-line bg-slate-50 p-4 text-base leading-7 text-slate-700">
+          <p className="font-bold text-navy-900">如果按下後無法登入，請檢查 Supabase：</p>
+          <p>1. GitHub Actions Secrets 已設定 NEXT_PUBLIC_SUPABASE_URL / NEXT_PUBLIC_SUPABASE_ANON_KEY。</p>
+          <p>2. Supabase Google Provider 已啟用。</p>
+          <p>3. Redirect URL 已加入目前這頁網址。</p>
+        </div>
         {message ? <p className="mt-4 rounded-lg bg-blue-50 p-3 font-bold text-navy-900">{message}</p> : null}
       </section>
     );

@@ -25,5 +25,6 @@ export function createSupabaseBrowserClient() {
 
 export function getSiteUrl() {
   if (typeof window === "undefined") return "https://jifudes01-crypto.github.io/JIFU-DM-Builder";
-  return `${window.location.origin}/JIFU-DM-Builder`;
+  const path = window.location.pathname.startsWith("/JIFU-DM-Builder") ? "/JIFU-DM-Builder" : "";
+  return `${window.location.origin}${path}`;
 }
