@@ -1,7 +1,6 @@
 import type {
   Contact,
   PrintOption,
-  PrintRequest,
   Team,
   TemplateWithBlocks
 } from "@/types/database";
@@ -189,5 +188,3 @@ export const demoPrintOptions: PrintOption[] = [
   { id: "po-rush-yes", type: "rush", label: "急件", value: "yes", vendor: null, sort_order: 1, is_active: true },
   { id: "po-cut-yes", type: "cutting", label: "需要裁切", value: "yes", vendor: null, sort_order: 1, is_active: true }
 ];
-
-export const demoPrintRequests: PrintRequest[] = [];

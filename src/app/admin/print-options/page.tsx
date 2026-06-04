@@ -9,7 +9,7 @@ export default async function PrintOptionsPage() {
       <div className="rounded-lg bg-white p-6 shadow-tight">
         <p className="eyebrow">印刷選項</p>
         <h1 className="section-title">印刷選項</h1>
-        <p className="section-subtitle">這些選項會顯示在前台「需要印刷」表單中。</p>
+        <p className="section-subtitle">保留印刷選項資料，後續若恢復印刷流程可直接沿用。</p>
       </div>
 
       <StaticForm operation="create-print-option" className="card grid gap-4 p-5 md:grid-cols-5">

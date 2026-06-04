@@ -4,14 +4,12 @@ import { createSupabaseAdminClient } from "@/lib/supabase";
 import {
   demoContacts,
   demoPrintOptions,
-  demoPrintRequests,
   demoTeams,
   demoTemplates
 } from "@/lib/demo-data";
 import type {
   Contact,
   PrintOption,
-  PrintRequest,
   Team,
   Template,
   TemplateBlock,
@@ -140,18 +138,6 @@ export const listPrintOptions = cache(async (activeOnly = true): Promise<PrintOp
   if (activeOnly) query = query.eq("is_active", true);
 
   const { data, error } = await query;
-  if (error) throw error;
-  return data ?? [];
-});
-
-export const listPrintRequests = cache(async (): Promise<PrintRequest[]> => {
-  if (!isSupabaseConfigured()) return demoPrintRequests;
-  const supabase = createSupabaseAdminClient();
-  const { data, error } = await supabase
-    .from("print_requests")
-    .select("*, teams(name), templates(name), contacts(name, mobile)")
-    .order("created_at", { ascending: false });
-
   if (error) throw error;
   return data ?? [];
 });

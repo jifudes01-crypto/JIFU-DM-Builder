@@ -3,19 +3,18 @@
 import Link from "next/link";
 import { useEffect, useState } from "react";
 import { loadPublicWorkspaceData } from "@/lib/supabase-public-data";
-import type { Contact, PrintOption, PrintRequest, Team, Template } from "@/types/database";
+import type { Contact, PrintOption, Team, Template } from "@/types/database";
 
 interface UnifiedWorkspaceClientProps {
   teams: Team[];
   templates: Array<Template & { block_count?: number }>;
   contacts: Contact[];
   printOptions: PrintOption[];
-  printRequests: PrintRequest[];
 }
 
-export function UnifiedWorkspaceClient({ teams, templates, contacts, printOptions, printRequests }: UnifiedWorkspaceClientProps) {
+export function UnifiedWorkspaceClient({ teams, templates, contacts, printOptions }: UnifiedWorkspaceClientProps) {
   const [tab, setTab] = useState<"front" | "admin">("front");
-  const [data, setData] = useState({ teams, templates, contacts, printOptions, printRequests });
+  const [data, setData] = useState({ teams, templates, contacts, printOptions });
   const [message, setMessage] = useState("");
 
   useEffect(() => {
@@ -37,8 +36,7 @@ export function UnifiedWorkspaceClient({ teams, templates, contacts, printOption
     { label: "團隊", value: data.teams.length, href: "/admin/teams" },
     { label: "模板", value: data.templates.length, href: "/admin/templates" },
     { label: "通訊錄", value: data.contacts.length, href: "/admin/contacts" },
-    { label: "印刷選項", value: data.printOptions.length, href: "/admin/print-options" },
-    { label: "待處理印刷需求", value: data.printRequests.filter((request) => request.status === "pending").length, href: "/admin/print-requests" }
+    { label: "印刷選項", value: data.printOptions.length, href: "/admin/print-options" }
   ];
 
   return (
@@ -87,9 +85,9 @@ export function UnifiedWorkspaceClient({ teams, templates, contacts, printOption
           <div className="mb-6 rounded-lg bg-white p-6 shadow-tight">
             <p className="eyebrow">管理後台</p>
             <h2 className="section-title">後台管理</h2>
-            <p className="section-subtitle">從同一個網站進入團隊、模板、通訊錄與印刷需求管理。</p>
+            <p className="section-subtitle">從同一個網站進入團隊、模板、通訊錄與印刷選項管理。</p>
           </div>
-          <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-5">
+          <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
             {adminCards.map((card) => (
               <Link key={card.label} href={card.href} className="card p-5">
                 <p className="text-base font-bold text-slate-500">{card.label}</p>

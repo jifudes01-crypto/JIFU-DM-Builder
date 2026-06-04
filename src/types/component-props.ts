@@ -1,5 +1,5 @@
 import type { RefObject } from "react";
-import type { Contact, PrintOption, TemplateWithBlocks } from "@/types/database";
+import type { Contact, TemplateWithBlocks } from "@/types/database";
 
 export interface StageExportHandle {
   toDataURL(config?: {
@@ -23,7 +23,6 @@ export interface DmEditorProps {
   teamId: string;
   template: TemplateWithBlocks;
   contacts: Contact[];
-  printOptions: PrintOption[];
 }
 
 export interface TemplateBlockEditorProps {

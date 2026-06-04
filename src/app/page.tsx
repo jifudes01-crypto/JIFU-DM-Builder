@@ -1,14 +1,13 @@
 import { UnifiedWorkspaceClient } from "@/components/front/UnifiedWorkspaceClient";
-import { listAdminTemplates, listContacts, listPrintOptions, listPrintRequests, listTeams } from "@/lib/data";
+import { listAdminTemplates, listContacts, listPrintOptions, listTeams } from "@/lib/data";
 
 export default async function HomePage() {
-  const [teams, templates, contacts, printOptions, printRequests] = await Promise.all([
+  const [teams, templates, contacts, printOptions] = await Promise.all([
     listTeams(),
     listAdminTemplates(),
     listContacts(undefined, false),
-    listPrintOptions(false),
-    listPrintRequests()
+    listPrintOptions(false)
   ]);
 
-  return <UnifiedWorkspaceClient teams={teams} templates={templates} contacts={contacts} printOptions={printOptions} printRequests={printRequests} />;
+  return <UnifiedWorkspaceClient teams={teams} templates={templates} contacts={contacts} printOptions={printOptions} />;
 }

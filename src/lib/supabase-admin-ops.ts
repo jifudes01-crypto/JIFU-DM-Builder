@@ -1,7 +1,7 @@
 "use client";
 
 import { createSupabaseBrowserClient } from "@/lib/supabase-browser";
-import type { BlockType, PrintStatus, TemplateBlock } from "@/types/database";
+import type { BlockType, TemplateBlock } from "@/types/database";
 
 function textValue(formData: FormData, key: string, fallback = "") {
   return String(formData.get(key) ?? fallback).trim();
@@ -217,15 +217,6 @@ export async function runAdminOperation(operation: string, formData: FormData) {
     const { error } = await supabase.from("print_options").update({ is_active: formData.get("is_active") === "true" }).eq("id", textValue(formData, "option_id"));
     if (error) throw error;
     return "印刷選項狀態已同步。";
-  }
-
-  if (operation === "print-request-status") {
-    const { error } = await supabase.from("print_requests").update({
-      status: textValue(formData, "status") as PrintStatus,
-      internal_note: textValue(formData, "internal_note")
-    }).eq("id", textValue(formData, "request_id"));
-    if (error) throw error;
-    return "印刷需求狀態已同步。";
   }
 
   throw new Error("未知的後台操作。");

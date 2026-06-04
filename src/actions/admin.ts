@@ -463,17 +463,3 @@ export async function updatePrintOptionStatusAction(formData: FormData) {
   if (error) throw error;
   revalidatePath("/admin/print-options");
 }
-
-export async function updatePrintRequestAction(formData: FormData) {
-  assertSupabaseReady();
-  const supabase = createSupabaseAdminClient();
-  const { error } = await supabase
-    .from("print_requests")
-    .update({
-      status: textValue(formData, "status", "pending"),
-      internal_note: textValue(formData, "internal_note") || null
-    })
-    .eq("id", textValue(formData, "request_id"));
-  if (error) throw error;
-  revalidatePath("/admin/print-requests");
-}

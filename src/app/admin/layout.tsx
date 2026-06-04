@@ -7,8 +7,7 @@ const links = [
   { href: "/admin/teams", label: "團隊管理" },
   { href: "/admin/templates", label: "模板管理" },
   { href: "/admin/contacts", label: "通訊錄" },
-  { href: "/admin/print-options", label: "印刷選項" },
-  { href: "/admin/print-requests", label: "印刷需求" }
+  { href: "/admin/print-options", label: "印刷選項" }
 ];
 
 export default function AdminLayout({ children }: { children: ReactNode }) {

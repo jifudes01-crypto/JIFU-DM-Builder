@@ -5,18 +5,17 @@ import { useSearchParams } from "next/navigation";
 import { useEffect, useState } from "react";
 import { DmEditorClient } from "@/components/front/DmEditorClient";
 import { loadEditorData } from "@/lib/supabase-public-data";
-import type { Contact, PrintOption, Team, TemplateWithBlocks } from "@/types/database";
+import type { Contact, Team, TemplateWithBlocks } from "@/types/database";
 
 interface EditorPageClientProps {
   teams: Team[];
   templates: TemplateWithBlocks[];
   contacts: Contact[];
-  printOptions: PrintOption[];
 }
 
-export function EditorPageClient({ teams, templates, contacts, printOptions }: EditorPageClientProps) {
+export function EditorPageClient({ teams, templates, contacts }: EditorPageClientProps) {
   const searchParams = useSearchParams();
-  const [data, setData] = useState({ teams, templates, contacts, printOptions });
+  const [data, setData] = useState({ teams, templates, contacts });
   const [message, setMessage] = useState("");
   const teamId = searchParams.get("team") ?? "";
   const templateId = searchParams.get("template") ?? "";
@@ -27,7 +26,7 @@ export function EditorPageClient({ teams, templates, contacts, printOptions }: E
   useEffect(() => {
     loadEditorData()
       .then((remoteData) => {
-        if (remoteData) setData(remoteData);
+        if (remoteData) setData({ teams: remoteData.teams, templates: remoteData.templates, contacts: remoteData.contacts });
       })
       .catch((error) => setMessage(error instanceof Error ? error.message : "讀取 Supabase 編輯資料失敗。"));
   }, []);
@@ -71,7 +70,7 @@ export function EditorPageClient({ teams, templates, contacts, printOptions }: E
         </Link>
       </div>
       {message ? <div className="mb-6 rounded-lg bg-blue-50 p-4 font-bold text-navy-900">{message}</div> : null}
-      <DmEditorClient teamId={teamId} template={template} contacts={visibleContacts} printOptions={data.printOptions} />
+      <DmEditorClient teamId={teamId} template={template} contacts={visibleContacts} />
     </main>
   );
 }

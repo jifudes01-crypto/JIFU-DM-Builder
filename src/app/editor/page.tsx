@@ -1,13 +1,12 @@
 import { Suspense } from "react";
 import { EditorPageClient } from "@/components/front/EditorPageClient";
-import { listContacts, listPrintOptions, listPublishedTemplates, listTeams } from "@/lib/data";
+import { listContacts, listPublishedTemplates, listTeams } from "@/lib/data";
 
 export default async function EditorPage() {
   const teams = await listTeams();
-  const [templates, contacts, printOptions] = await Promise.all([
+  const [templates, contacts] = await Promise.all([
     Promise.all(teams.map((team) => listPublishedTemplates(team.id))).then((items) => items.flat()),
-    listContacts(undefined, true),
-    listPrintOptions(true)
+    listContacts(undefined, true)
   ]);
 
   return (
@@ -20,7 +19,7 @@ export default async function EditorPage() {
         </main>
       }
     >
-      <EditorPageClient teams={teams} templates={templates} contacts={contacts} printOptions={printOptions} />
+      <EditorPageClient teams={teams} templates={templates} contacts={contacts} />
     </Suspense>
   );
 }

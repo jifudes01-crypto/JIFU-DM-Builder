@@ -79,7 +79,6 @@ values ('auth.users 的 id', '你的 Google Email', true);
 5. 即時預覽
 6. 下載 PNG / JPG / PDF
 7. 手機或 LINE 內可用專用儲存頁長按圖片保存
-8. 可暫存印刷需求
 
 ## 後台功能
 
@@ -88,13 +87,12 @@ values ('auth.users 的 id', '你的 Google Email', true);
 - 模板區塊：人工框選可編輯區域，可拖曳、縮放、刪除，並提供同步預覽。
 - 通訊錄：手動新增、編輯、啟用/停用、Excel/CSV 匯入。
 - 印刷選項：維護類別、材質尺寸、數量、廠商。
-- 印刷需求：查看批量明細、總件數、預覽圖、下載檔、匯出 CSV。
 
 ## GitHub Pages 限制
 
 GitHub Pages 是靜態網站，無法執行 Next.js server actions，也不能安全使用 Supabase service role。
 
-目前 GitHub Pages 版已改用 Supabase Browser Client。前台公開讀取資料與送出印刷需求，後台需 Google 管理員登入後才能新增、編輯、刪除資料。
+目前 GitHub Pages 版已改用 Supabase Browser Client。前台公開讀取資料並製作下載 DM，後台需 Google 管理員登入後才能新增、編輯、刪除資料。
 
 ## 常用指令
 

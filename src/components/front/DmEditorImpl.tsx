@@ -2,23 +2,18 @@
 
 import { zodResolver } from "@hookform/resolvers/zod";
 import jsPDF from "jspdf";
-import { useEffect, useMemo, useRef, useState, useTransition } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import { useForm, type Resolver } from "react-hook-form";
 import * as XLSX from "xlsx";
 import { z } from "zod";
 import { ImageUploadField } from "@/components/front/ImageUploadField";
 import { TemplateCanvasPreview } from "@/components/front/TemplateCanvasPreview";
-import { createSupabaseBrowserClient, isBrowserSupabaseConfigured } from "@/lib/supabase-browser";
 import type { DmEditorProps, StageExportHandle } from "@/types/component-props";
 import type {
   BatchRow,
   EditorFormValues,
   TemplateBlock
 } from "@/types/database";
-
-function groupOptions(options: DmEditorProps["printOptions"], type: DmEditorProps["printOptions"][number]["type"]) {
-  return options.filter((option) => option.type === type);
-}
 
 function isImageBlock(block: TemplateBlock) {
   return ["image", "avatar", "logo"].includes(block.type);
@@ -44,23 +39,6 @@ function dataUrlToPdfDataUrl(imageDataUrl: string, template: DmEditorProps["temp
   });
   pdf.addImage(imageDataUrl, "PNG", 0, 0, template.width, template.height);
   return pdf.output("datauristring");
-}
-
-function dataUrlToBlob(dataUrl: string) {
-  const [header, content] = dataUrl.split(",");
-  const mime = header.match(/data:(.*?);base64/)?.[1] ?? "application/octet-stream";
-  const binary = atob(content);
-  const bytes = new Uint8Array(binary.length);
-  for (let index = 0; index < binary.length; index += 1) bytes[index] = binary.charCodeAt(index);
-  return new Blob([bytes], { type: mime });
-}
-
-async function uploadExportFile(dataUrl: string, extension: "png" | "jpg" | "pdf") {
-  const supabase = createSupabaseBrowserClient();
-  const path = `exports/${crypto.randomUUID()}.${extension}`;
-  const { error } = await supabase.storage.from("dm-exports").upload(path, dataUrlToBlob(dataUrl), { upsert: false });
-  if (error) throw error;
-  return supabase.storage.from("dm-exports").getPublicUrl(path).data.publicUrl;
 }
 
 function createSchema(blocks: TemplateBlock[]) {
@@ -95,27 +73,15 @@ function createSchema(blocks: TemplateBlock[]) {
     });
 }
 
-export function DmEditor({ teamId, template, contacts, printOptions }: DmEditorProps) {
+export function DmEditor({ teamId, template, contacts }: DmEditorProps) {
   const stageRef = useRef<StageExportHandle | null>(null);
   const [message, setMessage] = useState("");
   const [batchRows, setBatchRows] = useState<BatchRow[]>([]);
   const [batchIndex, setBatchIndex] = useState(0);
-  const [needsPrint, setNeedsPrint] = useState(false);
-  const [confirmingPrint, setConfirmingPrint] = useState<FormData | null>(null);
   const [generated, setGenerated] = useState<{ png: string; jpg: string; pdf: string; saveKey: string } | null>(null);
-  const [isPending, startTransition] = useTransition();
   const schema = useMemo(() => createSchema(template.blocks), [template.blocks]);
   const textBlocks = template.blocks.filter((block) => !isImageBlock(block) && block.type !== "qrcode");
   const imageBlocks = template.blocks.filter((block) => isImageBlock(block));
-  const quantityOptions = groupOptions(printOptions, "quantity");
-  const materialOptions = [
-    ...groupOptions(printOptions, "material_size"),
-    ...groupOptions(printOptions, "paper"),
-    ...groupOptions(printOptions, "size")
-  ];
-  const vendorOptions = groupOptions(printOptions, "vendor");
-  const rushOptions = groupOptions(printOptions, "rush");
-  const cuttingOptions = groupOptions(printOptions, "cutting");
 
   const form = useForm<EditorFormValues>({
     resolver: zodResolver(schema) as Resolver<EditorFormValues>,
@@ -127,10 +93,6 @@ export function DmEditor({ teamId, template, contacts, printOptions }: DmEditorP
   });
   const watched = form.watch();
   const selectedContact = contacts.find((contact) => contact.id === watched.contactId) ?? null;
-  const printTargets = batchRows.length
-    ? batchRows.map((row) => ({ id: row.id, label: row.label }))
-    : [{ id: "single", label: selectedContact?.name ?? "單筆 DM" }];
-
   useEffect(() => {
     const raw = localStorage.getItem(getStorageKey(teamId, template.id));
     if (!raw) return;
@@ -209,7 +171,7 @@ export function DmEditor({ teamId, template, contacts, printOptions }: DmEditorP
   async function createExports() {
     const valid = await form.trigger();
     if (!valid) {
-      throw new Error("請先補齊必填欄位，再下載或送印。");
+      throw new Error("請先補齊必填欄位，再下載。");
     }
 
     const stage = stageRef.current;
@@ -240,86 +202,6 @@ export function DmEditor({ teamId, template, contacts, printOptions }: DmEditorP
     } catch (error) {
       setMessage(error instanceof Error ? error.message : "下載失敗，請再試一次。");
     }
-  }
-
-  function handlePrintSubmit(formData: FormData) {
-    setConfirmingPrint(formData);
-  }
-
-  function confirmPrintSubmit() {
-    const formData = confirmingPrint;
-    if (!formData) return;
-    startTransition(async () => {
-      try {
-        setMessage("正在送出印刷需求...");
-        const exports = await createExports();
-        const batchItems = printTargets.map((target) => {
-          const quantity = Number(formData.get(`quantity_${target.id}`) ?? formData.get("print_quantity") ?? 0) || 0;
-          const contactId = String(formData.get(`contact_${target.id}`) ?? selectedContact?.id ?? "");
-          const contact = contacts.find((item) => item.id === contactId) ?? selectedContact;
-          return {
-            id: target.id,
-            contactId: contact?.id ?? null,
-            contactName: contact?.name ?? target.label,
-            quantity,
-            materialSize: String(formData.get(`material_${target.id}`) ?? formData.get("material_size") ?? ""),
-            vendor: String(formData.get(`vendor_${target.id}`) ?? formData.get("vendor") ?? ""),
-            label: target.label
-          };
-        });
-        const totalQuantity = batchItems.reduce((sum, item) => sum + item.quantity, 0);
-        if (!isBrowserSupabaseConfigured()) {
-          throw new Error("尚未設定 Supabase，無法同步送出印刷需求。");
-        }
-        const [pngUrl, jpgUrl, pdfUrl] = await Promise.all([
-          uploadExportFile(exports.png, "png"),
-          uploadExportFile(exports.jpg, "jpg"),
-          uploadExportFile(exports.pdf, "pdf")
-        ]);
-        const supabase = createSupabaseBrowserClient();
-        const { data: exportRecord, error: exportError } = await supabase
-          .from("exports")
-          .insert({
-            team_id: teamId,
-            template_id: template.id,
-            contact_id: selectedContact?.id ?? null,
-            format: "png",
-            file_url: pngUrl,
-            preview_url: pngUrl,
-            payload: { values: form.getValues("values"), batchRow: batchRows[batchIndex] ?? null }
-          })
-          .select("id")
-          .single();
-        if (exportError) throw exportError;
-        const { error: requestError } = await supabase.from("print_requests").insert({
-          team_id: teamId,
-          template_id: template.id,
-          contact_id: selectedContact?.id ?? null,
-          export_id: exportRecord.id,
-          preview_url: pngUrl,
-          png_url: pngUrl,
-          jpg_url: jpgUrl,
-          pdf_url: pdfUrl,
-          print_quantity: String(totalQuantity),
-          paper: batchItems.map((item) => item.materialSize).filter(Boolean).join("、"),
-          size: batchItems.map((item) => item.materialSize).filter(Boolean).join("、"),
-          material_summary: batchItems.map((item) => item.materialSize).filter(Boolean).join("、"),
-          vendor: batchItems.map((item) => item.vendor).filter(Boolean).join("、"),
-          total_quantity: totalQuantity,
-          batch_items: batchItems.map((item) => ({ ...item, previewUrl: pngUrl, pngUrl, jpgUrl, pdfUrl })),
-          is_rush: formData.get("is_rush") === "yes",
-          is_cutting: formData.get("is_cutting") === "yes",
-          message: String(formData.get("message") ?? ""),
-          status: "pending",
-          payload: { values: form.getValues("values"), batchRow: batchRows[batchIndex] ?? null }
-        });
-        if (requestError) throw requestError;
-        setConfirmingPrint(null);
-        setMessage("印刷需求已同步送出，後台可跨裝置查看。");
-      } catch (error) {
-        setMessage(error instanceof Error ? error.message : "送出失敗，請再試一次。");
-      }
-    });
   }
 
   return (
@@ -463,128 +345,7 @@ export function DmEditor({ teamId, template, contacts, printOptions }: DmEditorP
           ) : null}
         </div>
 
-        <div className="card p-5">
-          <p className="eyebrow">Step 6</p>
-          <h2 className="section-title">是否需要印刷</h2>
-          <div className="mt-4 grid gap-3 sm:grid-cols-2">
-            <button type="button" className="btn btn-secondary" onClick={() => setNeedsPrint(false)}>
-              不需要印刷，只下載檔案
-            </button>
-            <button type="button" className="btn btn-primary" onClick={() => setNeedsPrint(true)}>
-              需要印刷
-            </button>
-          </div>
-
-          {needsPrint ? (
-            <form
-              onSubmit={(event) => {
-                event.preventDefault();
-                handlePrintSubmit(new FormData(event.currentTarget));
-              }}
-              className="mt-5 grid gap-4"
-            >
-              {printTargets.map((target) => (
-                <div key={target.id} className="grid gap-3 rounded-lg border border-line bg-slate-50 p-3 sm:grid-cols-4">
-                  <p className="font-black text-navy-900 sm:col-span-4">{target.label}</p>
-                  <label>
-                    <span className="field-label">業務</span>
-                    <select name={`contact_${target.id}`} defaultValue={selectedContact?.id ?? ""} required>
-                      {contacts.map((contact) => (
-                        <option key={contact.id} value={contact.id}>
-                          {contact.name}
-                        </option>
-                      ))}
-                    </select>
-                  </label>
-                  <label>
-                    <span className="field-label">數量</span>
-                    <select name={`quantity_${target.id}`} required>
-                      {quantityOptions.length ? quantityOptions.map((option) => (
-                        <option key={option.id} value={option.value}>
-                          {option.value}
-                        </option>
-                      )) : <option value="1">1</option>}
-                    </select>
-                  </label>
-                  <label>
-                    <span className="field-label">材質尺寸</span>
-                    <select name={`material_${target.id}`} required>
-                      {materialOptions.length ? materialOptions.map((option) => (
-                        <option key={option.id} value={option.value}>
-                          {option.label}
-                        </option>
-                      )) : <option value="未指定">未指定</option>}
-                    </select>
-                  </label>
-                  <label>
-                    <span className="field-label">廠商</span>
-                    <select name={`vendor_${target.id}`}>
-                      {vendorOptions.length ? vendorOptions.map((option) => (
-                        <option key={option.id} value={option.value}>
-                          {option.vendor || option.label}
-                        </option>
-                      )) : <option value="未指定">未指定</option>}
-                    </select>
-                  </label>
-                </div>
-              ))}
-              <label className="sm:col-span-2">
-                <span className="field-label">是否急件</span>
-                <select name="is_rush">
-                  <option value="no">一般件</option>
-                  {rushOptions.map((option) => (
-                    <option key={option.id} value={option.value}>
-                      {option.label}
-                    </option>
-                  ))}
-                </select>
-              </label>
-              <label className="sm:col-span-2">
-                <span className="field-label">是否裁切</span>
-                <select name="is_cutting">
-                  <option value="no">不裁切</option>
-                  {cuttingOptions.map((option) => (
-                    <option key={option.id} value={option.value}>
-                      {option.label}
-                    </option>
-                  ))}
-                </select>
-              </label>
-              <label className="sm:col-span-2">
-                <span className="field-label">備註留言</span>
-                <textarea name="message" placeholder="有特殊需求可寫在這裡" />
-              </label>
-              <div className="sm:col-span-2">
-                <button type="submit" className="btn btn-blue w-full" disabled={isPending}>
-                  {isPending ? "送出中..." : "送出印刷需求"}
-                </button>
-              </div>
-            </form>
-          ) : null}
-        </div>
-
         {message ? <div className="card border-blue-200 bg-blue-50 p-4 text-base font-bold text-navy-900">{message}</div> : null}
-        {confirmingPrint ? (
-          <div className="fixed inset-0 z-50 grid place-items-center bg-navy-900/70 p-4">
-            <div className="w-full max-w-lg rounded-lg bg-white p-6 shadow-tight">
-              <h2 className="text-2xl font-black text-navy-900">確認印刷需求</h2>
-              <p className="mt-4 text-lg leading-8 text-slate-700">
-                請確實核對您的編輯內容無誤，送出申請將視同正式提出印刷需求，將由專人聯繫您核對。
-              </p>
-              <div className="mt-6 grid gap-3 sm:grid-cols-3">
-                <button type="button" className="btn btn-secondary" onClick={() => setConfirmingPrint(null)}>
-                  回上一頁
-                </button>
-                <button type="button" className="btn btn-blue" onClick={confirmPrintSubmit} disabled={isPending}>
-                  確認申請
-                </button>
-                <button type="button" className="btn btn-danger" onClick={() => setConfirmingPrint(null)}>
-                  取消申請
-                </button>
-              </div>
-            </div>
-          </div>
-        ) : null}
       </section>
     </div>
   );
