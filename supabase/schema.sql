@@ -62,29 +62,6 @@ create table if not exists teams (
   updated_at timestamptz not null default now()
 );
 
-create table if not exists admin_users (
-  id uuid primary key default gen_random_uuid(),
-  user_id uuid not null unique references auth.users(id) on delete cascade,
-  email text not null,
-  is_active boolean not null default true,
-  created_at timestamptz not null default now()
-);
-
-create or replace function is_admin()
-returns boolean
-language sql
-stable
-security definer
-set search_path = public
-as $$
-  select exists (
-    select 1
-    from admin_users
-    where user_id = auth.uid()
-      and is_active = true
-  );
-$$;
-
 create table if not exists templates (
   id uuid primary key default gen_random_uuid(),
   team_id uuid not null references teams(id) on delete cascade,
@@ -239,7 +216,6 @@ values
   ('rush', '急件', 'yes', null, 1),
   ('cutting', '需要裁切', 'yes', null, 1);
 
-alter table admin_users enable row level security;
 alter table teams enable row level security;
 alter table templates enable row level security;
 alter table template_blocks enable row level security;
@@ -248,55 +224,55 @@ alter table print_options enable row level security;
 alter table exports enable row level security;
 alter table print_requests enable row level security;
 
-drop policy if exists "admins can read admin users" on admin_users;
-create policy "admins can read admin users" on admin_users for select to authenticated using (is_admin() or user_id = auth.uid());
-
 drop policy if exists "public read active teams" on teams;
-create policy "public read active teams" on teams for select to anon, authenticated using (is_active = true or is_admin());
+create policy "public read active teams" on teams for select to anon, authenticated using (true);
 drop policy if exists "admins write teams" on teams;
-create policy "admins write teams" on teams for all to authenticated using (is_admin()) with check (is_admin());
+drop policy if exists "public manage teams" on teams;
+create policy "public manage teams" on teams for all to anon, authenticated using (true) with check (true);
 
 drop policy if exists "public read published templates" on templates;
-create policy "public read published templates" on templates for select to anon, authenticated using (status = 'published' or is_admin());
+create policy "public read published templates" on templates for select to anon, authenticated using (true);
 drop policy if exists "admins write templates" on templates;
-create policy "admins write templates" on templates for all to authenticated using (is_admin()) with check (is_admin());
+drop policy if exists "public manage templates" on templates;
+create policy "public manage templates" on templates for all to anon, authenticated using (true) with check (true);
 
 drop policy if exists "public read template blocks" on template_blocks;
-create policy "public read template blocks" on template_blocks for select to anon, authenticated using (
-  exists (
-    select 1 from templates
-    where templates.id = template_blocks.template_id
-      and (templates.status = 'published' or is_admin())
-  )
-);
+create policy "public read template blocks" on template_blocks for select to anon, authenticated using (true);
 drop policy if exists "admins write template blocks" on template_blocks;
-create policy "admins write template blocks" on template_blocks for all to authenticated using (is_admin()) with check (is_admin());
+drop policy if exists "public manage template blocks" on template_blocks;
+create policy "public manage template blocks" on template_blocks for all to anon, authenticated using (true) with check (true);
 
 drop policy if exists "public read active contacts" on contacts;
-create policy "public read active contacts" on contacts for select to anon, authenticated using (is_active = true or is_admin());
+create policy "public read active contacts" on contacts for select to anon, authenticated using (true);
 drop policy if exists "admins write contacts" on contacts;
-create policy "admins write contacts" on contacts for all to authenticated using (is_admin()) with check (is_admin());
+drop policy if exists "public manage contacts" on contacts;
+create policy "public manage contacts" on contacts for all to anon, authenticated using (true) with check (true);
 
 drop policy if exists "public read active print options" on print_options;
-create policy "public read active print options" on print_options for select to anon, authenticated using (is_active = true or is_admin());
+create policy "public read active print options" on print_options for select to anon, authenticated using (true);
 drop policy if exists "admins write print options" on print_options;
-create policy "admins write print options" on print_options for all to authenticated using (is_admin()) with check (is_admin());
+drop policy if exists "public manage print options" on print_options;
+create policy "public manage print options" on print_options for all to anon, authenticated using (true) with check (true);
 
 drop policy if exists "public insert exports" on exports;
 create policy "public insert exports" on exports for insert to anon, authenticated with check (true);
 drop policy if exists "admins read exports" on exports;
-create policy "admins read exports" on exports for select to authenticated using (is_admin());
+drop policy if exists "public read exports" on exports;
+create policy "public read exports" on exports for select to anon, authenticated using (true);
 
 drop policy if exists "public insert print requests" on print_requests;
 create policy "public insert print requests" on print_requests for insert to anon, authenticated with check (true);
 drop policy if exists "admins read print requests" on print_requests;
-create policy "admins read print requests" on print_requests for select to authenticated using (is_admin());
+drop policy if exists "public read print requests" on print_requests;
+create policy "public read print requests" on print_requests for select to anon, authenticated using (true);
 drop policy if exists "admins update print requests" on print_requests;
-create policy "admins update print requests" on print_requests for update to authenticated using (is_admin()) with check (is_admin());
+drop policy if exists "public update print requests" on print_requests;
+create policy "public update print requests" on print_requests for update to anon, authenticated using (true) with check (true);
 
 drop policy if exists "public read template assets" on storage.objects;
 create policy "public read template assets" on storage.objects for select to anon, authenticated using (bucket_id in ('template-assets', 'contact-assets', 'dm-exports'));
 drop policy if exists "admins upload template assets" on storage.objects;
-create policy "admins upload template assets" on storage.objects for insert to authenticated with check (bucket_id in ('template-assets', 'contact-assets') and is_admin());
+drop policy if exists "public upload template assets" on storage.objects;
+create policy "public upload template assets" on storage.objects for insert to anon, authenticated with check (bucket_id in ('template-assets', 'contact-assets'));
 drop policy if exists "public upload dm exports" on storage.objects;
 create policy "public upload dm exports" on storage.objects for insert to anon, authenticated with check (bucket_id = 'dm-exports');

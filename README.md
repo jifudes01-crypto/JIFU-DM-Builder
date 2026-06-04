@@ -52,23 +52,18 @@ https://jifudes01-crypto.github.io/JIFU-DM-Builder/
 
 - `NEXT_PUBLIC_SUPABASE_URL`
 - `NEXT_PUBLIC_SUPABASE_ANON_KEY`
+- `NEXT_PUBLIC_ADMIN_ACCESS_CODE`：預設管理代碼目前為 `JIFU7513`，若要改代碼可用這個 Secret 覆蓋。
 
-GitHub Pages 不能使用 `SUPABASE_SERVICE_ROLE_KEY`，後台管理改由 Google 登入 + Supabase RLS 控制。
+GitHub Pages 不能使用 `SUPABASE_SERVICE_ROLE_KEY`。目前後台改用簡易管理代碼進入，資料同步由 Supabase Browser Client 負責。
 
-## Google 管理員登入
+## 管理代碼登入
 
-1. 到 Supabase Dashboard 啟用 `Authentication > Providers > Google`。
-2. Site URL 設為 `https://jifudes01-crypto.github.io`。
-3. Redirect URL 加入 `https://jifudes01-crypto.github.io/JIFU-DM-Builder/admin/`。
-4. 使用 Google 登入後，到 Supabase `auth.users` 找到該帳號。
-5. 將該帳號加入 `admin_users`：
+1. 到 GitHub repository 的 `Settings > Secrets and variables > Actions`。
+2. 新增 `NEXT_PUBLIC_ADMIN_ACCESS_CODE`，值就是後台管理代碼；目前預設為 `JIFU7513`。
+3. 推送或重新執行 GitHub Actions 部署。
+4. 開啟 `/admin`，輸入管理代碼即可進入後台。
 
-```sql
-insert into admin_users (user_id, email, is_active)
-values ('auth.users 的 id', '你的 Google Email', true);
-```
-
-只有 `admin_users.is_active = true` 的帳號可以操作後台。
+管理代碼通過後會記在該裝置的瀏覽器中，按「登出」會清除。此方式操作簡單，但不是高安全性的登入；因為 `NEXT_PUBLIC_ADMIN_ACCESS_CODE` 會被打包到前端，懂技術的人仍可能看到。若未來需要正式權限控管，建議再改回 Supabase Auth。
 
 ## 前台流程
 
@@ -92,7 +87,7 @@ values ('auth.users 的 id', '你的 Google Email', true);
 
 GitHub Pages 是靜態網站，無法執行 Next.js server actions，也不能安全使用 Supabase service role。
 
-目前 GitHub Pages 版已改用 Supabase Browser Client。前台公開讀取資料並製作下載 DM，後台需 Google 管理員登入後才能新增、編輯、刪除資料。
+目前 GitHub Pages 版已改用 Supabase Browser Client。前台公開讀取資料並製作下載 DM，後台輸入管理代碼後即可新增、編輯、刪除資料。為了支援這種簡易模式，Supabase RLS 需套用 `supabase/schema.sql` 內的匿名寫入政策。
 
 ## 常用指令
 

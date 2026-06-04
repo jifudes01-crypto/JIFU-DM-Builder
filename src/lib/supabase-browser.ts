@@ -17,14 +17,8 @@ export function createSupabaseBrowserClient() {
   return createClient(url, anonKey, {
     auth: {
       autoRefreshToken: true,
-      detectSessionInUrl: true,
+      detectSessionInUrl: false,
       persistSession: true
     }
   });
-}
-
-export function getSiteUrl() {
-  if (typeof window === "undefined") return "https://jifudes01-crypto.github.io/JIFU-DM-Builder";
-  const path = window.location.pathname.startsWith("/JIFU-DM-Builder") ? "/JIFU-DM-Builder" : "";
-  return `${window.location.origin}${path}`;
 }

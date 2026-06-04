@@ -1,6 +1,6 @@
 import Link from "next/link";
 import type { ReactNode } from "react";
-import { AdminAuthGate } from "@/components/admin/AdminAuthGate";
+import { AdminCodeGate } from "@/components/admin/AdminCodeGate";
 
 const links = [
   { href: "/admin", label: "總覽" },
@@ -22,7 +22,7 @@ export default function AdminLayout({ children }: { children: ReactNode }) {
           ))}
         </nav>
       </div>
-      <AdminAuthGate>{children}</AdminAuthGate>
+      <AdminCodeGate>{children}</AdminCodeGate>
     </main>
   );
 }
