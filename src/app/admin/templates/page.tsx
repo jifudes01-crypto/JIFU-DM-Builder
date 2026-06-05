@@ -22,9 +22,7 @@ export default async function AdminTemplatesPage() {
           <span className="field-label">團隊</span>
           <select name="team_id" required>
             {teams.map((team) => (
-              <option key={team.id} value={team.id}>
-                {team.name}
-              </option>
+              <option key={team.id} value={team.id}>{team.name}</option>
             ))}
           </select>
         </label>
@@ -65,9 +63,7 @@ export default async function AdminTemplatesPage() {
           <textarea name="notes" placeholder="內部備註，不會顯示在前台" />
         </label>
         <div className="lg:col-span-3">
-          <button type="submit" className="btn btn-blue">
-            新增模板
-          </button>
+          <button type="submit" className="btn btn-blue">新增模板</button>
         </div>
       </StaticForm>
 
@@ -105,36 +101,26 @@ export default async function AdminTemplatesPage() {
                   </td>
                   <td>
                     <div className="flex flex-wrap gap-2">
-                      <Link href={`/admin/templates/${template.id}/blocks`} className="btn btn-secondary">
+                      <Link href={`/admin/templates/blocks?id=${encodeURIComponent(template.id)}`} className="btn btn-secondary">
                         設定區塊
                       </Link>
                       <StaticForm operation="template-status">
                         <input type="hidden" name="template_id" value={template.id} />
                         <input type="hidden" name="status" value={template.status === "published" ? "draft" : "published"} />
-                        <button type="submit" className="btn btn-muted">
-                          {template.status === "published" ? "下架" : "上架"}
-                        </button>
+                        <button type="submit" className="btn btn-muted">{template.status === "published" ? "下架" : "上架"}</button>
                       </StaticForm>
                       <StaticForm operation="duplicate-template">
                         <input type="hidden" name="template_id" value={template.id} />
-                        <button type="submit" className="btn btn-secondary">
-                          複製
-                        </button>
+                        <button type="submit" className="btn btn-secondary">複製</button>
                       </StaticForm>
                       <StaticForm operation="delete-template">
                         <input type="hidden" name="template_id" value={template.id} />
-                        <button type="submit" className="btn btn-danger">
-                          刪除
-                        </button>
+                        <button type="submit" className="btn btn-danger">刪除</button>
                       </StaticForm>
                     </div>
                     <details className="mt-3">
                       <summary className="cursor-pointer text-base font-bold text-action">編輯模板資料</summary>
-                      <StaticForm
-                        operation="update-template"
-                        encType="multipart/form-data"
-                        className="mt-3 grid gap-3 rounded-lg border border-line bg-slate-50 p-3 md:grid-cols-2"
-                      >
+                      <StaticForm operation="update-template" encType="multipart/form-data" className="mt-3 grid gap-3 rounded-lg border border-line bg-slate-50 p-3 md:grid-cols-2">
                         <input type="hidden" name="template_id" value={template.id} />
                         <label>
                           <span className="field-label">名稱</span>
@@ -144,9 +130,7 @@ export default async function AdminTemplatesPage() {
                           <span className="field-label">團隊</span>
                           <select name="team_id" defaultValue={template.team_id}>
                             {teams.map((teamOption) => (
-                              <option key={teamOption.id} value={teamOption.id}>
-                                {teamOption.name}
-                              </option>
+                              <option key={teamOption.id} value={teamOption.id}>{teamOption.name}</option>
                             ))}
                           </select>
                         </label>
@@ -178,9 +162,7 @@ export default async function AdminTemplatesPage() {
                           <span className="field-label">內部備註</span>
                           <textarea name="notes" defaultValue={template.notes ?? ""} />
                         </label>
-                        <button type="submit" className="btn btn-blue md:col-span-2">
-                          儲存修改
-                        </button>
+                        <button type="submit" className="btn btn-blue md:col-span-2">儲存修改</button>
                       </StaticForm>
                     </details>
                   </td>

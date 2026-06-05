@@ -1,39 +1,24 @@
 import Link from "next/link";
-import { TemplateBlockEditorClient } from "@/components/admin/TemplateBlockEditorClient";
-import { getTemplateWithBlocks } from "@/lib/data";
-import { demoTemplates } from "@/lib/demo-data";
 
-interface BlocksPageProps {
-  params: Promise<{ id: string }>;
-}
-
-export default async function BlocksPage({ params }: BlocksPageProps) {
-  const { id } = await params;
-  const template = await getTemplateWithBlocks(id);
-
-  if (!template) {
-    return (
-      <section className="card p-6">
-        <h1 className="section-title">找不到模板</h1>
-        <Link href="/admin/templates" className="btn btn-primary mt-4">
-          回模板列表
-        </Link>
-      </section>
-    );
-  }
-
-  return (
-    <section className="space-y-6">
-      <div className="rounded-lg bg-white p-6 shadow-tight">
-        <p className="eyebrow">區塊設定</p>
-        <h1 className="section-title">{template.name}</h1>
-        <p className="section-subtitle">後台人工框選可編輯區域；前台只能填資料，不能拖曳或修改版面。</p>
-      </div>
-      <TemplateBlockEditorClient template={template} />
-    </section>
-  );
-}
+export const dynamicParams = false;
 
 export function generateStaticParams() {
-  return demoTemplates.map((template) => ({ id: template.id }));
+  // GitHub Pages is a static export. Do not generate demo/template placeholder
+  // routes such as demo-template-a4, because Supabase template IDs are UUIDs.
+  // The active block editor now lives at /admin/templates/blocks?id=<template_uuid>.
+  return [];
+}
+
+export default function DeprecatedTemplateBlocksPage() {
+  return (
+    <section className="card p-6">
+      <h1 className="section-title">區塊設定路徑已更新</h1>
+      <p className="section-subtitle">
+        為了相容 GitHub Pages 靜態部署，請從模板列表進入區塊設定。
+      </p>
+      <Link href="/admin/templates" className="btn btn-primary mt-4">
+        回模板列表
+      </Link>
+    </section>
+  );
 }
