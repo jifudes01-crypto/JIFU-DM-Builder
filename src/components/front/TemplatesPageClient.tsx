@@ -70,7 +70,7 @@ export function TemplatesPageClient({ teams, templates }: TemplatesPageClientPro
                 <span className="status-pill border-line bg-white text-slate-600">{template.blocks.length} 個區塊</span>
               </div>
               <h2 className="mt-4 text-2xl font-black text-navy-900">{template.name}</h2>
-              <p className="mt-2 text-base text-slate-600">{template.category}</p>
+              <p className="mt-2 text-base leading-7 text-slate-600">{template.description || template.category}</p>
               <span className="btn btn-primary mt-5 w-full">使用這個模板</span>
             </Link>
           ))}

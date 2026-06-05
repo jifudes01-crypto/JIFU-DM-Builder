@@ -11,7 +11,7 @@ interface StaticFormProps extends Omit<FormHTMLAttributes<HTMLFormElement>, "act
 
 export function StaticForm({
   children,
-  message = "GitHub Pages 是公開靜態網站，這裡不會直接寫入資料。若要正式同步資料，請連接 Supabase 前端權限或改用支援後端的部署環境。",
+  message = "這個表單尚未指定同步動作，請重新整理後再試一次。",
   operation,
   className,
   ...props

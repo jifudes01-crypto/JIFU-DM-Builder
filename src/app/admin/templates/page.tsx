@@ -57,7 +57,11 @@ export default async function AdminTemplatesPage() {
           <input name="images" type="file" accept="image/*" multiple required />
         </label>
         <label className="lg:col-span-3">
-          <span className="field-label">備註</span>
+          <span className="field-label">模板介紹</span>
+          <textarea name="description" placeholder="前台會顯示給使用者看的模板介紹，例如：適合每月精選物件、豪宅、店面或社區型 DM。" />
+        </label>
+        <label className="lg:col-span-3">
+          <span className="field-label">內部備註</span>
           <textarea name="notes" placeholder="內部備註，不會顯示在前台" />
         </label>
         <div className="lg:col-span-3">
@@ -87,7 +91,8 @@ export default async function AdminTemplatesPage() {
                 <tr key={template.id}>
                   <td>
                     <strong className="block text-navy-900">{template.name}</strong>
-                    <span className="text-sm text-slate-500">{template.notes}</span>
+                    <span className="block text-sm text-slate-500">{template.description || template.category}</span>
+                    {template.notes ? <span className="block text-xs text-slate-400">內部備註：{template.notes}</span> : null}
                   </td>
                   <td>{team?.name ?? "-"}</td>
                   <td>{template.category}</td>
@@ -162,11 +167,15 @@ export default async function AdminTemplatesPage() {
                           <input name="height" type="number" defaultValue={template.height} />
                         </label>
                         <label className="md:col-span-2">
+                          <span className="field-label">模板介紹</span>
+                          <textarea name="description" defaultValue={template.description ?? ""} />
+                        </label>
+                        <label className="md:col-span-2">
                           <span className="field-label">更換底圖</span>
                           <input name="image" type="file" accept="image/*" />
                         </label>
                         <label className="md:col-span-2">
-                          <span className="field-label">備註</span>
+                          <span className="field-label">內部備註</span>
                           <textarea name="notes" defaultValue={template.notes ?? ""} />
                         </label>
                         <button type="submit" className="btn btn-blue md:col-span-2">

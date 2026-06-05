@@ -25,14 +25,14 @@ async function uploadFile(bucket: string, file: File | null, prefix: string) {
   if (!file || file.size === 0) return null;
   const ext = file.name.split(".").pop() || "png";
   const path = `${prefix}/${crypto.randomUUID()}.${ext}`;
-  const supabase = createSupabaseBrowserClient();
+  const supabase = await createSupabaseBrowserClient();
   const { error } = await supabase.storage.from(bucket).upload(path, file, { upsert: false });
   if (error) throw error;
   return supabase.storage.from(bucket).getPublicUrl(path).data.publicUrl;
 }
 
 export async function runAdminOperation(operation: string, formData: FormData) {
-  const supabase = createSupabaseBrowserClient();
+  const supabase = await createSupabaseBrowserClient();
 
   if (operation === "create-team") {
     const name = textValue(formData, "name");
@@ -97,6 +97,7 @@ export async function runAdminOperation(operation: string, formData: FormData) {
       status: textValue(formData, "status", "draft"),
       image_url: await uploadFile("template-assets", file, "templates"),
       thumbnail_url: null,
+      description: textValue(formData, "description"),
       notes: textValue(formData, "notes")
     })));
     const { error } = await supabase.from("templates").insert(rows);
@@ -112,6 +113,7 @@ export async function runAdminOperation(operation: string, formData: FormData) {
       size_label: textValue(formData, "size_label", "A4 直式"),
       width: numberValue(formData, "width", 794),
       height: numberValue(formData, "height", 1123),
+      description: textValue(formData, "description"),
       notes: textValue(formData, "notes")
     };
     const imageUrl = await uploadFile("template-assets", formData.get("image") as File | null, "templates");
@@ -201,29 +203,11 @@ export async function runAdminOperation(operation: string, formData: FormData) {
     return `已同步匯入 ${contacts.length} 筆人員。`;
   }
 
-  if (operation === "create-print-option") {
-    const { error } = await supabase.from("print_options").insert({
-      type: textValue(formData, "type"),
-      label: textValue(formData, "label"),
-      value: textValue(formData, "value"),
-      vendor: textValue(formData, "vendor"),
-      is_active: true
-    });
-    if (error) throw error;
-    return "印刷選項已同步新增。";
-  }
-
-  if (operation === "print-option-status") {
-    const { error } = await supabase.from("print_options").update({ is_active: formData.get("is_active") === "true" }).eq("id", textValue(formData, "option_id"));
-    if (error) throw error;
-    return "印刷選項狀態已同步。";
-  }
-
   throw new Error("未知的後台操作。");
 }
 
 export async function saveTemplateBlocks(templateId: string, blocks: Array<Omit<TemplateBlock, "created_at" | "updated_at" | "metadata">>) {
-  const supabase = createSupabaseBrowserClient();
+  const supabase = await createSupabaseBrowserClient();
   const { error: deleteError } = await supabase.from("template_blocks").delete().eq("template_id", templateId);
   if (deleteError) throw deleteError;
   if (!blocks.length) return;

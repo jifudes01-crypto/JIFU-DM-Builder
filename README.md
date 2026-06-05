@@ -81,13 +81,12 @@ GitHub Pages 不能使用 `SUPABASE_SERVICE_ROLE_KEY`。目前後台改用簡易
 - 模板管理：新增、編輯、上架/下架、複製、刪除。
 - 模板區塊：人工框選可編輯區域，可拖曳、縮放、刪除，並提供同步預覽。
 - 通訊錄：手動新增、編輯、啟用/停用、Excel/CSV 匯入。
-- 印刷選項：維護類別、材質尺寸、數量、廠商。
 
 ## GitHub Pages 限制
 
 GitHub Pages 是靜態網站，無法執行 Next.js server actions，也不能安全使用 Supabase service role。
 
-目前 GitHub Pages 版已改用 Supabase Browser Client。前台公開讀取資料並製作下載 DM，後台輸入管理代碼後即可新增、編輯、刪除資料。為了支援這種簡易模式，Supabase RLS 需套用 `supabase/schema.sql` 內的匿名寫入政策。
+目前 GitHub Pages 版已改用 Supabase Browser Client。前台公開讀取資料並製作下載 DM，後台輸入管理代碼後即可新增、編輯、刪除資料。正式部署時 GitHub Actions 會用 Secrets 產生公開的 `supabase-config.json`，Supabase RLS 需套用 `supabase/schema.sql` 內的匿名寫入政策。
 
 ## 常用指令
 

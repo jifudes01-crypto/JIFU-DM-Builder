@@ -1,19 +1,17 @@
 import Link from "next/link";
-import { listAdminTeams, listAdminTemplates, listContacts, listPrintOptions } from "@/lib/data";
+import { listAdminTeams, listAdminTemplates, listContacts } from "@/lib/data";
 
 export default async function AdminPage() {
-  const [teams, templates, contacts, printOptions] = await Promise.all([
+  const [teams, templates, contacts] = await Promise.all([
     listAdminTeams(),
     listAdminTemplates(),
-    listContacts(undefined, false),
-    listPrintOptions(false)
+    listContacts(undefined, false)
   ]);
 
   const cards = [
     { label: "團隊", value: teams.length, href: "/admin/teams" },
     { label: "模板", value: templates.length, href: "/admin/templates" },
-    { label: "通訊錄", value: contacts.length, href: "/admin/contacts" },
-    { label: "印刷選項", value: printOptions.length, href: "/admin/print-options" }
+    { label: "通訊錄", value: contacts.length, href: "/admin/contacts" }
   ];
 
   return (
@@ -23,7 +21,7 @@ export default async function AdminPage() {
         <h1 className="section-title">吉富 DM 管理後台</h1>
         <p className="section-subtitle">後台設定模板、框選可編輯區域、維護團隊與通訊錄。</p>
       </div>
-      <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
+      <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
         {cards.map((card) => (
           <Link key={card.label} href={card.href} className="card p-5">
             <p className="text-base font-bold text-slate-500">{card.label}</p>

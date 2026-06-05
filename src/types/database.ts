@@ -42,6 +42,7 @@ export interface Template {
   status: TemplateStatus;
   image_url: string;
   thumbnail_url: string | null;
+  description: string | null;
   notes: string | null;
   duplicated_from: string | null;
   created_at?: string;

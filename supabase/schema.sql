@@ -73,6 +73,7 @@ create table if not exists templates (
   status template_status not null default 'draft',
   image_url text not null,
   thumbnail_url text,
+  description text,
   notes text,
   duplicated_from uuid references templates(id) on delete set null,
   created_at timestamptz not null default now(),
@@ -174,6 +175,7 @@ create index if not exists idx_contacts_team_active on contacts(team_id, is_acti
 create index if not exists idx_print_requests_status on print_requests(status, created_at desc);
 
 alter table teams add column if not exists description text;
+alter table templates add column if not exists description text;
 alter table print_options add column if not exists vendor text;
 alter table print_requests add column if not exists total_quantity integer not null default 0;
 alter table print_requests add column if not exists material_summary text;

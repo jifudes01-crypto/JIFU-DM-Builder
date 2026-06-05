@@ -1,6 +1,5 @@
 import type {
   Contact,
-  PrintOption,
   Team,
   TemplateWithBlocks
 } from "@/types/database";
@@ -19,6 +18,7 @@ export const demoTemplates: TemplateWithBlocks[] = [
     status: "published",
     image_url: "",
     thumbnail_url: null,
+    description: "示範模板，正式使用時請從後台上傳底圖並設定介紹。",
     notes: "Demo 模板；正式版請從後台上傳底圖。",
     duplicated_from: null,
     blocks: [
@@ -177,14 +177,4 @@ export const demoContacts: Contact[] = [
     is_active: true,
     notes: "Demo 聯絡人"
   }
-];
-
-export const demoPrintOptions: PrintOption[] = [
-  { id: "po-quantity-100", type: "quantity", label: "一般印量", value: "100", vendor: null, sort_order: 1, is_active: true },
-  { id: "po-quantity-300", type: "quantity", label: "一般印量", value: "300", vendor: null, sort_order: 2, is_active: true },
-  { id: "po-material-a4", type: "material_size", label: "銅版紙 A4", value: "銅版紙 A4", vendor: null, sort_order: 1, is_active: true },
-  { id: "po-material-matte-a4", type: "material_size", label: "霧面紙 A4", value: "霧面紙 A4", vendor: null, sort_order: 2, is_active: true },
-  { id: "po-vendor-default", type: "vendor", label: "預設廠商", value: "預設廠商", vendor: "預設廠商", sort_order: 1, is_active: true },
-  { id: "po-rush-yes", type: "rush", label: "急件", value: "yes", vendor: null, sort_order: 1, is_active: true },
-  { id: "po-cut-yes", type: "cutting", label: "需要裁切", value: "yes", vendor: null, sort_order: 1, is_active: true }
 ];

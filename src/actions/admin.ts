@@ -437,29 +437,3 @@ export async function importContactsAction(formData: FormData) {
   if (error) throw error;
   revalidatePath("/admin/contacts");
 }
-
-export async function createPrintOptionAction(formData: FormData) {
-  assertSupabaseReady();
-  const supabase = createSupabaseAdminClient();
-  const { error } = await supabase.from("print_options").insert({
-    type: textValue(formData, "type"),
-    label: textValue(formData, "label"),
-    value: textValue(formData, "value"),
-    vendor: textValue(formData, "vendor") || null,
-    sort_order: numberValue(formData, "sort_order", 100),
-    is_active: formData.get("is_active") !== "off"
-  });
-  if (error) throw error;
-  revalidatePath("/admin/print-options");
-}
-
-export async function updatePrintOptionStatusAction(formData: FormData) {
-  assertSupabaseReady();
-  const supabase = createSupabaseAdminClient();
-  const { error } = await supabase
-    .from("print_options")
-    .update({ is_active: formData.get("is_active") === "true" })
-    .eq("id", textValue(formData, "option_id"));
-  if (error) throw error;
-  revalidatePath("/admin/print-options");
-}

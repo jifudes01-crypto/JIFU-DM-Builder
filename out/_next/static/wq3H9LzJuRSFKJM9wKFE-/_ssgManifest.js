@@ -1,1 +1,0 @@
-self.__SSG_MANIFEST=new Set(["\u002Fadmin\u002Ftemplates\u002F[id]\u002Fblocks"]);self.__SSG_MANIFEST_CB&&self.__SSG_MANIFEST_CB()

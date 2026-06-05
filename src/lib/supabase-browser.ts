@@ -1,24 +1,65 @@
 "use client";
 
-import { createClient } from "@supabase/supabase-js";
+import { createClient, type SupabaseClient } from "@supabase/supabase-js";
 
-export function isBrowserSupabaseConfigured() {
-  return Boolean(process.env.NEXT_PUBLIC_SUPABASE_URL && process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY);
+interface RuntimeSupabaseConfig {
+  url: string;
+  anonKey: string;
 }
 
-export function createSupabaseBrowserClient() {
-  const url = process.env.NEXT_PUBLIC_SUPABASE_URL;
-  const anonKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY;
+let configPromise: Promise<RuntimeSupabaseConfig | null> | null = null;
+let clientPromise: Promise<SupabaseClient> | null = null;
 
-  if (!url || !anonKey) {
-    throw new Error("Supabase 尚未設定，請先在 GitHub Secrets 設定 NEXT_PUBLIC_SUPABASE_URL 與 NEXT_PUBLIC_SUPABASE_ANON_KEY。");
+function getBasePath() {
+  if (typeof window === "undefined") return "";
+  return window.location.pathname.startsWith("/JIFU-DM-Builder") ? "/JIFU-DM-Builder" : "";
+}
+
+async function loadRuntimeConfig() {
+  if (typeof window === "undefined") return null;
+  try {
+    const response = await fetch(`${getBasePath()}/supabase-config.json`, { cache: "no-store" });
+    if (!response.ok) return null;
+    const data = (await response.json()) as Partial<RuntimeSupabaseConfig>;
+    if (data.url && data.anonKey) return { url: data.url, anonKey: data.anonKey };
+  } catch {
+    return null;
   }
+  return null;
+}
 
-  return createClient(url, anonKey, {
-    auth: {
-      autoRefreshToken: true,
-      detectSessionInUrl: false,
-      persistSession: true
+async function getBrowserSupabaseConfig() {
+  if (!configPromise) {
+    configPromise = loadRuntimeConfig().then((runtimeConfig) => {
+      if (runtimeConfig) return runtimeConfig;
+      const url = process.env.NEXT_PUBLIC_SUPABASE_URL;
+      const anonKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY;
+      return url && anonKey ? { url, anonKey } : null;
+    });
+  }
+  return configPromise;
+}
+
+export async function isBrowserSupabaseConfigured() {
+  return Boolean(await getBrowserSupabaseConfig());
+}
+
+export async function createSupabaseBrowserClient() {
+  if (clientPromise) return clientPromise;
+
+  clientPromise = getBrowserSupabaseConfig().then((config) => {
+    if (!config) {
+      throw new Error("Supabase 尚未完成部署設定，請檢查 GitHub Secrets 是否已設定 NEXT_PUBLIC_SUPABASE_URL 與 NEXT_PUBLIC_SUPABASE_ANON_KEY。");
     }
+
+    return createClient(config.url, config.anonKey, {
+      auth: {
+        autoRefreshToken: true,
+        detectSessionInUrl: false,
+        persistSession: true
+      }
+    });
   });
+
+  return clientPromise;
 }

@@ -23,6 +23,27 @@ jobs:
       - name: Checkout
         uses: actions/checkout@v4
 
+      - name: Create Supabase public config
+        env:
+          NEXT_PUBLIC_SUPABASE_URL: ${{ secrets.NEXT_PUBLIC_SUPABASE_URL }}
+          NEXT_PUBLIC_SUPABASE_ANON_KEY: ${{ secrets.NEXT_PUBLIC_SUPABASE_ANON_KEY }}
+        run: |
+          python3 - <<'PY'
+          import json
+          import os
+          import sys
+
+          url = os.environ.get("NEXT_PUBLIC_SUPABASE_URL", "").strip()
+          anon_key = os.environ.get("NEXT_PUBLIC_SUPABASE_ANON_KEY", "").strip()
+
+          if not url or not anon_key:
+              print("Supabase 尚未完成部署設定，請在 GitHub Secrets 設定 NEXT_PUBLIC_SUPABASE_URL 與 NEXT_PUBLIC_SUPABASE_ANON_KEY。")
+              sys.exit(1)
+
+          with open("out/supabase-config.json", "w", encoding="utf-8") as file:
+              json.dump({"url": url, "anonKey": anon_key}, file, ensure_ascii=False)
+          PY
+
       - name: Verify prebuilt site
         run: test -f out/admin/index.html && grep -q "目前版本：代碼登入" out/admin/index.html
 

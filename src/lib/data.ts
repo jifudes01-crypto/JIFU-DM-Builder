@@ -3,13 +3,11 @@ import { isSupabaseConfigured } from "@/lib/env";
 import { createSupabaseAdminClient } from "@/lib/supabase";
 import {
   demoContacts,
-  demoPrintOptions,
   demoTeams,
   demoTemplates
 } from "@/lib/demo-data";
 import type {
   Contact,
-  PrintOption,
   Team,
   Template,
   TemplateBlock,
@@ -122,19 +120,6 @@ export const listContacts = cache(async (teamId?: string, activeOnly = true): Pr
   const supabase = createSupabaseAdminClient();
   let query = supabase.from("contacts").select("*").order("name");
   if (teamId) query = query.eq("team_id", teamId);
-  if (activeOnly) query = query.eq("is_active", true);
-
-  const { data, error } = await query;
-  if (error) throw error;
-  return data ?? [];
-});
-
-export const listPrintOptions = cache(async (activeOnly = true): Promise<PrintOption[]> => {
-  if (!isSupabaseConfigured()) {
-    return demoPrintOptions.filter((option) => !activeOnly || option.is_active);
-  }
-  const supabase = createSupabaseAdminClient();
-  let query = supabase.from("print_options").select("*").order("type").order("sort_order");
   if (activeOnly) query = query.eq("is_active", true);
 
   const { data, error } = await query;
