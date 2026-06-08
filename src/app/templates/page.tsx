@@ -1,11 +1,7 @@
 import { Suspense } from "react";
 import { TemplatesPageClient } from "@/components/front/TemplatesPageClient";
-import { listPublishedTemplates, listTeams } from "@/lib/data";
 
-export default async function TemplatesPage() {
-  const teams = await listTeams();
-  const templates = (await Promise.all(teams.map((team) => listPublishedTemplates(team.id)))).flat();
-
+export default function TemplatesPage() {
   return (
     <Suspense
       fallback={
@@ -16,7 +12,7 @@ export default async function TemplatesPage() {
         </main>
       }
     >
-      <TemplatesPageClient teams={teams} templates={templates} />
+      <TemplatesPageClient />
     </Suspense>
   );
 }
