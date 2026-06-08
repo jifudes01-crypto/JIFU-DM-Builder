@@ -1,5 +1,6 @@
 "use client";
 
+import type { SupabaseClient } from "@supabase/supabase-js";
 import { createSupabaseBrowserClient } from "@/lib/supabase-browser";
 import type { BlockType, TemplateBlock } from "@/types/database";
 
@@ -13,12 +14,32 @@ function numberValue(formData: FormData, key: string, fallback: number) {
 }
 
 function slugValue(value: string) {
-  return value
-    .trim()
-    .toLowerCase()
-    .replace(/[^\p{L}\p{N}]+/gu, "-")
-    .replace(/^-+|-+$/g, "")
-    || crypto.randomUUID();
+  return (
+    value
+      .trim()
+      .toLowerCase()
+      .replace(/[^\p{L}\p{N}]+/gu, "-")
+      .replace(/^-+|-+$/g, "") || crypto.randomUUID()
+  );
+}
+
+function readableSupabaseError(error: unknown) {
+  if (!error || typeof error !== "object") return error instanceof Error ? error.message : "同步失敗，請稍後再試。";
+  const detail = error as { message?: string; code?: string; details?: string; hint?: string; status?: number };
+  return [detail.message, detail.code ? `代碼：${detail.code}` : "", detail.details, detail.hint].filter(Boolean).join(" / ") || "同步失敗，請稍後再試。";
+}
+
+async function getUniqueTeamSlug(supabase: SupabaseClient, name: string, currentTeamId?: string) {
+  const baseSlug = slugValue(name);
+
+  for (let index = 0; index < 100; index += 1) {
+    const candidate = index === 0 ? baseSlug : `${baseSlug}-${index + 1}`;
+    const { data, error } = await supabase.from("teams").select("id").eq("slug", candidate).maybeSingle();
+    if (error) throw new Error(readableSupabaseError(error));
+    if (!data || data.id === currentTeamId) return candidate;
+  }
+
+  return `${baseSlug}-${crypto.randomUUID().slice(0, 8)}`;
 }
 
 async function uploadFile(bucket: string, file: File | null, prefix: string) {
@@ -27,8 +48,15 @@ async function uploadFile(bucket: string, file: File | null, prefix: string) {
   const path = `${prefix}/${crypto.randomUUID()}.${ext}`;
   const supabase = await createSupabaseBrowserClient();
   const { error } = await supabase.storage.from(bucket).upload(path, file, { upsert: false });
-  if (error) throw error;
+  if (error) throw new Error(readableSupabaseError(error));
   return supabase.storage.from(bucket).getPublicUrl(path).data.publicUrl;
+}
+
+export async function listTeamsForAdmin() {
+  const supabase = await createSupabaseBrowserClient();
+  const { data, error } = await supabase.from("teams").select("*").order("sort_order").order("name");
+  if (error) throw new Error(readableSupabaseError(error));
+  return data ?? [];
 }
 
 export async function runAdminOperation(operation: string, formData: FormData) {
@@ -38,70 +66,79 @@ export async function runAdminOperation(operation: string, formData: FormData) {
     const name = textValue(formData, "name");
     const { error } = await supabase.from("teams").insert({
       name,
-      slug: slugValue(name),
+      slug: await getUniqueTeamSlug(supabase, name),
       description: textValue(formData, "description"),
       sort_order: numberValue(formData, "sort_order", 100),
       is_active: true
     });
-    if (error) throw error;
+    if (error) throw new Error(readableSupabaseError(error));
     return "團隊已同步新增。";
   }
 
   if (operation === "update-team") {
     const teamId = textValue(formData, "team_id");
     const name = textValue(formData, "name");
-    const { error } = await supabase.from("teams").update({
-      name,
-      slug: slugValue(name),
-      description: textValue(formData, "description"),
-      sort_order: numberValue(formData, "sort_order", 100)
-    }).eq("id", teamId);
-    if (error) throw error;
+    const { error } = await supabase
+      .from("teams")
+      .update({
+        name,
+        slug: await getUniqueTeamSlug(supabase, name, teamId),
+        description: textValue(formData, "description"),
+        sort_order: numberValue(formData, "sort_order", 100)
+      })
+      .eq("id", teamId);
+    if (error) throw new Error(readableSupabaseError(error));
     return "團隊已同步更新。";
   }
 
   if (operation === "team-status") {
     const { error } = await supabase.from("teams").update({ is_active: formData.get("is_active") === "true" }).eq("id", textValue(formData, "team_id"));
-    if (error) throw error;
+    if (error) throw new Error(readableSupabaseError(error));
     return "團隊狀態已同步。";
   }
 
   if (operation === "delete-team") {
     const { error } = await supabase.from("teams").delete().eq("id", textValue(formData, "team_id"));
-    if (error) throw error;
+    if (error) throw new Error(readableSupabaseError(error));
     return "團隊已刪除。";
   }
 
   if (operation === "import-teams") {
     const rows = JSON.parse(textValue(formData, "teams_json", "[]")) as Array<{ name: string; description?: string; sort_order?: number; is_active?: boolean }>;
-    const { error } = await supabase.from("teams").upsert(rows.map((row, index) => ({
-      name: row.name,
-      slug: slugValue(row.name),
-      description: row.description ?? "",
-      sort_order: row.sort_order ?? index + 1,
-      is_active: row.is_active ?? true
-    })), { onConflict: "slug" });
-    if (error) throw error;
+    const rowsWithSlugs = [];
+    for (const [index, row] of rows.entries()) {
+      rowsWithSlugs.push({
+        name: row.name,
+        slug: await getUniqueTeamSlug(supabase, row.name),
+        description: row.description ?? "",
+        sort_order: row.sort_order ?? index + 1,
+        is_active: row.is_active ?? true
+      });
+    }
+    const { error } = await supabase.from("teams").insert(rowsWithSlugs);
+    if (error) throw new Error(readableSupabaseError(error));
     return `已同步匯入 ${rows.length} 筆團隊。`;
   }
 
   if (operation === "create-template") {
     const files = formData.getAll("images").filter((item): item is File => item instanceof File && item.size > 0);
-    const rows = await Promise.all(files.map(async (file, index) => ({
-      team_id: textValue(formData, "team_id"),
-      name: files.length > 1 ? `${textValue(formData, "name")} ${index + 1}` : textValue(formData, "name"),
-      category: textValue(formData, "category", "每月精選物件"),
-      size_label: textValue(formData, "size_label", "A4 直式"),
-      width: numberValue(formData, "width", 794),
-      height: numberValue(formData, "height", 1123),
-      status: textValue(formData, "status", "draft"),
-      image_url: await uploadFile("template-assets", file, "templates"),
-      thumbnail_url: null,
-      description: textValue(formData, "description"),
-      notes: textValue(formData, "notes")
-    })));
+    const rows = await Promise.all(
+      files.map(async (file, index) => ({
+        team_id: textValue(formData, "team_id"),
+        name: files.length > 1 ? `${textValue(formData, "name")} ${index + 1}` : textValue(formData, "name"),
+        category: textValue(formData, "category", "每月精選物件"),
+        size_label: textValue(formData, "size_label", "A4 直式"),
+        width: numberValue(formData, "width", 794),
+        height: numberValue(formData, "height", 1123),
+        status: textValue(formData, "status", "draft"),
+        image_url: await uploadFile("template-assets", file, "templates"),
+        thumbnail_url: null,
+        description: textValue(formData, "description"),
+        notes: textValue(formData, "notes")
+      }))
+    );
     const { error } = await supabase.from("templates").insert(rows);
-    if (error) throw error;
+    if (error) throw new Error(readableSupabaseError(error));
     return "模板已同步新增。";
   }
 
@@ -119,46 +156,52 @@ export async function runAdminOperation(operation: string, formData: FormData) {
     const imageUrl = await uploadFile("template-assets", formData.get("image") as File | null, "templates");
     if (imageUrl) patch.image_url = imageUrl;
     const { error } = await supabase.from("templates").update(patch).eq("id", textValue(formData, "template_id"));
-    if (error) throw error;
+    if (error) throw new Error(readableSupabaseError(error));
     return "模板已同步更新。";
   }
 
   if (operation === "template-status") {
     const { error } = await supabase.from("templates").update({ status: textValue(formData, "status", "draft") }).eq("id", textValue(formData, "template_id"));
-    if (error) throw error;
+    if (error) throw new Error(readableSupabaseError(error));
     return "模板狀態已同步。";
   }
 
   if (operation === "delete-template") {
     const { error } = await supabase.from("templates").delete().eq("id", textValue(formData, "template_id"));
-    if (error) throw error;
+    if (error) throw new Error(readableSupabaseError(error));
     return "模板已刪除。";
   }
 
   if (operation === "duplicate-template") {
     const id = textValue(formData, "template_id");
     const { data: template, error } = await supabase.from("templates").select("*").eq("id", id).single();
-    if (error) throw error;
+    if (error) throw new Error(readableSupabaseError(error));
     const { data: blocks } = await supabase.from("template_blocks").select("*").eq("template_id", id);
-    const { data: copied, error: copyError } = await supabase.from("templates").insert({
-      ...template,
-      id: undefined,
-      name: `${template.name} 複製`,
-      status: "draft",
-      duplicated_from: id,
-      created_at: undefined,
-      updated_at: undefined
-    }).select("id").single();
-    if (copyError) throw copyError;
-    if (blocks?.length) {
-      const { error: blockError } = await supabase.from("template_blocks").insert(blocks.map((block) => ({
-        ...block,
+    const { data: copied, error: copyError } = await supabase
+      .from("templates")
+      .insert({
+        ...template,
         id: undefined,
-        template_id: copied.id,
+        name: `${template.name} 複製`,
+        status: "draft",
+        duplicated_from: id,
         created_at: undefined,
         updated_at: undefined
-      })));
-      if (blockError) throw blockError;
+      })
+      .select("id")
+      .single();
+    if (copyError) throw new Error(readableSupabaseError(copyError));
+    if (blocks?.length) {
+      const { error: blockError } = await supabase.from("template_blocks").insert(
+        blocks.map((block) => ({
+          ...block,
+          id: undefined,
+          template_id: copied.id,
+          created_at: undefined,
+          updated_at: undefined
+        }))
+      );
+      if (blockError) throw new Error(readableSupabaseError(blockError));
     }
     return "模板已複製。";
   }
@@ -178,28 +221,28 @@ export async function runAdminOperation(operation: string, formData: FormData) {
     const qrcodeUrl = await uploadFile("contact-assets", formData.get("qrcode") as File | null, "qrcodes");
     if (avatarUrl) patch.avatar_url = avatarUrl;
     if (qrcodeUrl) patch.qrcode_url = qrcodeUrl;
-    const query = operation === "create-contact"
-      ? supabase.from("contacts").insert(patch)
-      : supabase.from("contacts").update(patch).eq("id", textValue(formData, "contact_id"));
+    const query = operation === "create-contact" ? supabase.from("contacts").insert(patch) : supabase.from("contacts").update(patch).eq("id", textValue(formData, "contact_id"));
     const { error } = await query;
-    if (error) throw error;
+    if (error) throw new Error(readableSupabaseError(error));
     return operation === "create-contact" ? "人員已同步新增。" : "人員已同步更新。";
   }
 
   if (operation === "contact-status") {
     const { error } = await supabase.from("contacts").update({ is_active: formData.get("is_active") === "true" }).eq("id", textValue(formData, "contact_id"));
-    if (error) throw error;
+    if (error) throw new Error(readableSupabaseError(error));
     return "人員狀態已同步。";
   }
 
   if (operation === "import-contacts") {
     const contacts = JSON.parse(textValue(formData, "contacts_json", "[]")) as Array<Record<string, string>>;
-    const { error } = await supabase.from("contacts").insert(contacts.map((contact) => ({
-      ...contact,
-      team_id: textValue(formData, "team_id"),
-      is_active: true
-    })));
-    if (error) throw error;
+    const { error } = await supabase.from("contacts").insert(
+      contacts.map((contact) => ({
+        ...contact,
+        team_id: textValue(formData, "team_id"),
+        is_active: true
+      }))
+    );
+    if (error) throw new Error(readableSupabaseError(error));
     return `已同步匯入 ${contacts.length} 筆人員。`;
   }
 
@@ -209,23 +252,25 @@ export async function runAdminOperation(operation: string, formData: FormData) {
 export async function saveTemplateBlocks(templateId: string, blocks: Array<Omit<TemplateBlock, "created_at" | "updated_at" | "metadata">>) {
   const supabase = await createSupabaseBrowserClient();
   const { error: deleteError } = await supabase.from("template_blocks").delete().eq("template_id", templateId);
-  if (deleteError) throw deleteError;
+  if (deleteError) throw new Error(readableSupabaseError(deleteError));
   if (!blocks.length) return;
-  const { error } = await supabase.from("template_blocks").insert(blocks.map((block, index) => ({
-    template_id: templateId,
-    type: block.type as BlockType,
-    label: block.label,
-    required: block.required,
-    max_length: block.max_length,
-    x: block.x,
-    y: block.y,
-    width: block.width,
-    height: block.height,
-    font_size: block.font_size,
-    color: block.color,
-    text_align: block.text_align,
-    image_fit: block.image_fit,
-    z_index: index + 1
-  })));
-  if (error) throw error;
+  const { error } = await supabase.from("template_blocks").insert(
+    blocks.map((block, index) => ({
+      template_id: templateId,
+      type: block.type as BlockType,
+      label: block.label,
+      required: block.required,
+      max_length: block.max_length,
+      x: block.x,
+      y: block.y,
+      width: block.width,
+      height: block.height,
+      font_size: block.font_size,
+      color: block.color,
+      text_align: block.text_align,
+      image_fit: block.image_fit,
+      z_index: index + 1
+    }))
+  );
+  if (error) throw new Error(readableSupabaseError(error));
 }

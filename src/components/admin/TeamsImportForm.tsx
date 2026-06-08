@@ -12,12 +12,12 @@ type ImportTeamRow = {
 };
 
 function boolValue(value: unknown) {
-  const text = String(value ?? "").trim();
+  const text = String(value ?? "").trim().toLowerCase();
   if (!text) return true;
-  return !["否", "停用", "false", "0", "no"].includes(text.toLowerCase());
+  return !["否", "停用", "false", "0", "no"].includes(text);
 }
 
-export function TeamsImportForm() {
+export function TeamsImportForm({ onSuccess }: { onSuccess?: () => void | Promise<void> }) {
   const [rows, setRows] = useState<ImportTeamRow[]>([]);
 
   async function parseFile(file?: File) {
@@ -29,17 +29,17 @@ export function TeamsImportForm() {
     setRows(
       rawRows
         .map((row, index) => ({
-          name: String(row["團隊名稱"] ?? row["名稱"] ?? "").trim(),
-          description: String(row["簡易敘述"] ?? row["敘述"] ?? "").trim(),
-          sort_order: Number(row["排序"] ?? index + 1),
-          is_active: boolValue(row["啟用"])
+          name: String(row["團隊名稱"] ?? row["名稱"] ?? row.name ?? "").trim(),
+          description: String(row["簡易敘述"] ?? row["敘述"] ?? row.description ?? "").trim(),
+          sort_order: Number(row["排序"] ?? row.sort_order ?? index + 1),
+          is_active: boolValue(row["啟用"] ?? row.is_active)
         }))
         .filter((row) => row.name)
     );
   }
 
   return (
-    <StaticForm operation="import-teams" className="card grid gap-4 p-5 md:grid-cols-[1fr_auto] md:items-end">
+    <StaticForm operation="import-teams" onSuccess={onSuccess} className="card grid gap-4 p-5 md:grid-cols-[1fr_auto] md:items-end">
       <input type="hidden" name="teams_json" value={JSON.stringify(rows)} />
       <label>
         <span className="field-label">匯入團隊 CSV / Excel</span>

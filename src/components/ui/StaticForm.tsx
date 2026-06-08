@@ -7,12 +7,16 @@ interface StaticFormProps extends Omit<FormHTMLAttributes<HTMLFormElement>, "act
   children: ReactNode;
   message?: string;
   operation?: string;
+  resetOnSuccess?: boolean;
+  onSuccess?: () => void | Promise<void>;
 }
 
 export function StaticForm({
   children,
   message = "這個表單尚未指定同步動作，請重新整理後再試一次。",
   operation,
+  resetOnSuccess = true,
+  onSuccess,
   className,
   ...props
 }: StaticFormProps) {
@@ -29,11 +33,16 @@ export function StaticForm({
           setNotice(message);
           return;
         }
+
+        const form = event.currentTarget;
         setBusy(true);
-        runAdminOperation(operation, new FormData(event.currentTarget))
-          .then((result) => {
+        setNotice("");
+
+        runAdminOperation(operation, new FormData(form))
+          .then(async (result) => {
             setNotice(result);
-            event.currentTarget.reset();
+            if (resetOnSuccess) form.reset();
+            await onSuccess?.();
           })
           .catch((error) => setNotice(error instanceof Error ? error.message : "同步失敗，請稍後再試。"))
           .finally(() => setBusy(false));

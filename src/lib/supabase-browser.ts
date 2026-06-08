@@ -21,7 +21,7 @@ async function loadRuntimeConfig() {
     const response = await fetch(`${getBasePath()}/supabase-config.json`, { cache: "no-store" });
     if (!response.ok) return null;
     const data = (await response.json()) as Partial<RuntimeSupabaseConfig>;
-    if (data.url && data.anonKey) return { url: data.url, anonKey: data.anonKey };
+    if (data.url && data.anonKey) return { url: data.url.trim(), anonKey: data.anonKey.trim() };
   } catch {
     return null;
   }
@@ -32,8 +32,8 @@ async function getBrowserSupabaseConfig() {
   if (!configPromise) {
     configPromise = loadRuntimeConfig().then((runtimeConfig) => {
       if (runtimeConfig) return runtimeConfig;
-      const url = process.env.NEXT_PUBLIC_SUPABASE_URL;
-      const anonKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY;
+      const url = process.env.NEXT_PUBLIC_SUPABASE_URL?.trim();
+      const anonKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY?.trim();
       return url && anonKey ? { url, anonKey } : null;
     });
   }
@@ -54,9 +54,10 @@ export async function createSupabaseBrowserClient() {
 
     return createClient(config.url, config.anonKey, {
       auth: {
-        autoRefreshToken: true,
+        autoRefreshToken: false,
         detectSessionInUrl: false,
-        persistSession: true
+        persistSession: false,
+        storageKey: "jifu-dm-disabled-auth-session"
       }
     });
   });
