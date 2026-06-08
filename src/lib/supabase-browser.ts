@@ -58,6 +58,17 @@ export async function createSupabaseBrowserClient() {
         detectSessionInUrl: false,
         persistSession: false,
         storageKey: "jifu-dm-disabled-auth-session"
+      },
+      global: {
+        fetch: (input, init) =>
+          fetch(input, {
+            ...init,
+            cache: "no-store",
+            headers: {
+              ...Object.fromEntries(new Headers(init?.headers).entries()),
+              "Cache-Control": "no-cache"
+            }
+          })
       }
     });
   });

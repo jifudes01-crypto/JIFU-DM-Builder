@@ -1,15 +1,17 @@
 import Link from "next/link";
-import { listAdminTeams, listAdminTemplates, listContacts } from "@/lib/data";
+import { listAdminDepartments, listAdminTeams, listAdminTemplates, listContacts } from "@/lib/data";
 
 export default async function AdminPage() {
-  const [teams, templates, contacts] = await Promise.all([
+  const [teams, departments, templates, contacts] = await Promise.all([
     listAdminTeams(),
+    listAdminDepartments(),
     listAdminTemplates(),
     listContacts(undefined, false)
   ]);
 
   const cards = [
     { label: "團隊", value: teams.length, href: "/admin/teams" },
+    { label: "部門", value: departments.length, href: "/admin/departments" },
     { label: "模板", value: templates.length, href: "/admin/templates" },
     { label: "通訊錄", value: contacts.length, href: "/admin/contacts" }
   ];

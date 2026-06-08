@@ -2,7 +2,7 @@
 
 import type { SupabaseClient } from "@supabase/supabase-js";
 import { createSupabaseBrowserClient } from "@/lib/supabase-browser";
-import type { BlockType, TemplateBlock } from "@/types/database";
+import type { BlockType, Contact, Department, Team, TemplateBlock } from "@/types/database";
 
 function textValue(formData: FormData, key: string, fallback = "") {
   return String(formData.get(key) ?? fallback).trim();
@@ -27,6 +27,13 @@ function readableSupabaseError(error: unknown) {
   if (!error || typeof error !== "object") return error instanceof Error ? error.message : "同步失敗，請稍後再試。";
   const detail = error as { message?: string; code?: string; details?: string; hint?: string; status?: number };
   return [detail.message, detail.code ? `代碼：${detail.code}` : "", detail.details, detail.hint].filter(Boolean).join(" / ") || "同步失敗，請稍後再試。";
+}
+
+function isMissingDepartmentSchema(error: unknown) {
+  if (!error || typeof error !== "object") return false;
+  const detail = error as { code?: string; message?: string; details?: string };
+  const text = `${detail.message ?? ""} ${detail.details ?? ""}`.toLowerCase();
+  return ["42p01", "42703", "pgrst200", "pgrst205"].includes(String(detail.code ?? "").toLowerCase()) || text.includes("departments") || text.includes("department_id");
 }
 
 async function getUniqueTeamSlug(supabase: SupabaseClient, name: string, currentTeamId?: string) {
@@ -56,7 +63,48 @@ export async function listTeamsForAdmin() {
   const supabase = await createSupabaseBrowserClient();
   const { data, error } = await supabase.from("teams").select("*").order("sort_order").order("name");
   if (error) throw new Error(readableSupabaseError(error));
-  return data ?? [];
+  return (data ?? []) as Team[];
+}
+
+export async function listDepartmentsForAdmin() {
+  const supabase = await createSupabaseBrowserClient();
+  const { data, error } = await supabase.from("departments").select("*, teams(name)").order("sort_order").order("name");
+  if (error) {
+    if (isMissingDepartmentSchema(error)) return [];
+    throw new Error(readableSupabaseError(error));
+  }
+  return (data ?? []) as Department[];
+}
+
+export async function listContactsForAdmin() {
+  const supabase = await createSupabaseBrowserClient();
+  const { data, error } = await supabase.from("contacts").select("*, departments(name)").order("name");
+  if (error && isMissingDepartmentSchema(error)) {
+    const fallback = await supabase.from("contacts").select("*").order("name");
+    if (fallback.error) throw new Error(readableSupabaseError(fallback.error));
+    return (fallback.data ?? []).map((contact) => ({ ...contact, department_id: null })) as Contact[];
+  }
+  if (error) throw new Error(readableSupabaseError(error));
+  return (data ?? []) as Contact[];
+}
+
+async function findTeamByName(supabase: SupabaseClient, name: string) {
+  if (!name) return null;
+  const { data, error } = await supabase.from("teams").select("id").eq("name", name).maybeSingle();
+  if (error) throw new Error(readableSupabaseError(error));
+  return data?.id ?? null;
+}
+
+async function findDepartmentByName(supabase: SupabaseClient, teamId: string, name: string) {
+  if (!teamId || !name) return null;
+  const { data, error } = await supabase
+    .from("departments")
+    .select("id")
+    .eq("team_id", teamId)
+    .eq("name", name)
+    .maybeSingle();
+  if (error) throw new Error(readableSupabaseError(error));
+  return data?.id ?? null;
 }
 
 export async function runAdminOperation(operation: string, formData: FormData) {
@@ -64,10 +112,12 @@ export async function runAdminOperation(operation: string, formData: FormData) {
 
   if (operation === "create-team") {
     const name = textValue(formData, "name");
+    const logoUrl = await uploadFile("contact-assets", formData.get("logo") as File | null, "team-logos");
     const { error } = await supabase.from("teams").insert({
       name,
       slug: await getUniqueTeamSlug(supabase, name),
       description: textValue(formData, "description"),
+      logo_url: logoUrl,
       sort_order: numberValue(formData, "sort_order", 100),
       is_active: true
     });
@@ -78,14 +128,17 @@ export async function runAdminOperation(operation: string, formData: FormData) {
   if (operation === "update-team") {
     const teamId = textValue(formData, "team_id");
     const name = textValue(formData, "name");
+    const patch: Record<string, unknown> = {
+      name,
+      slug: await getUniqueTeamSlug(supabase, name, teamId),
+      description: textValue(formData, "description"),
+      sort_order: numberValue(formData, "sort_order", 100)
+    };
+    const logoUrl = await uploadFile("contact-assets", formData.get("logo") as File | null, "team-logos");
+    if (logoUrl) patch.logo_url = logoUrl;
     const { error } = await supabase
       .from("teams")
-      .update({
-        name,
-        slug: await getUniqueTeamSlug(supabase, name, teamId),
-        description: textValue(formData, "description"),
-        sort_order: numberValue(formData, "sort_order", 100)
-      })
+      .update(patch)
       .eq("id", teamId);
     if (error) throw new Error(readableSupabaseError(error));
     return "團隊已同步更新。";
@@ -118,6 +171,47 @@ export async function runAdminOperation(operation: string, formData: FormData) {
     const { error } = await supabase.from("teams").insert(rowsWithSlugs);
     if (error) throw new Error(readableSupabaseError(error));
     return `已同步匯入 ${rows.length} 筆團隊。`;
+  }
+
+  if (operation === "create-department") {
+    const { error } = await supabase.from("departments").insert({
+      team_id: textValue(formData, "team_id"),
+      name: textValue(formData, "name"),
+      description: textValue(formData, "description"),
+      sort_order: numberValue(formData, "sort_order", 100),
+      is_active: true
+    });
+    if (error) throw new Error(readableSupabaseError(error));
+    return "部門已同步新增。";
+  }
+
+  if (operation === "update-department") {
+    const { error } = await supabase
+      .from("departments")
+      .update({
+        team_id: textValue(formData, "team_id"),
+        name: textValue(formData, "name"),
+        description: textValue(formData, "description"),
+        sort_order: numberValue(formData, "sort_order", 100)
+      })
+      .eq("id", textValue(formData, "department_id"));
+    if (error) throw new Error(readableSupabaseError(error));
+    return "部門已同步更新。";
+  }
+
+  if (operation === "department-status") {
+    const { error } = await supabase
+      .from("departments")
+      .update({ is_active: formData.get("is_active") === "true" })
+      .eq("id", textValue(formData, "department_id"));
+    if (error) throw new Error(readableSupabaseError(error));
+    return "部門狀態已同步。";
+  }
+
+  if (operation === "delete-department") {
+    const { error } = await supabase.from("departments").delete().eq("id", textValue(formData, "department_id"));
+    if (error) throw new Error(readableSupabaseError(error));
+    return "部門已刪除。";
   }
 
   if (operation === "create-template") {
@@ -207,8 +301,10 @@ export async function runAdminOperation(operation: string, formData: FormData) {
   }
 
   if (operation === "create-contact" || operation === "update-contact") {
+    const departmentId = textValue(formData, "department_id");
     const patch: Record<string, unknown> = {
       team_id: textValue(formData, "team_id"),
+      department_id: departmentId || null,
       name: textValue(formData, "name"),
       title: textValue(formData, "title"),
       mobile: textValue(formData, "mobile"),
@@ -234,14 +330,24 @@ export async function runAdminOperation(operation: string, formData: FormData) {
   }
 
   if (operation === "import-contacts") {
+    const fallbackTeamId = textValue(formData, "team_id");
     const contacts = JSON.parse(textValue(formData, "contacts_json", "[]")) as Array<Record<string, string>>;
-    const { error } = await supabase.from("contacts").insert(
-      contacts.map((contact) => ({
-        ...contact,
-        team_id: textValue(formData, "team_id"),
+    const rows = [];
+    for (const contact of contacts) {
+      const teamId = contact.team_id || (await findTeamByName(supabase, contact.team_name || contact["團隊名稱"] || "")) || fallbackTeamId;
+      const departmentId =
+        contact.department_id ||
+        (await findDepartmentByName(supabase, teamId, contact.department_name || contact["部門名稱"] || "")) ||
+        null;
+      const { team_id: _teamId, department_id: _departmentId, team_name: _teamName, department_name: _departmentName, 團隊名稱: _teamNameZh, 部門名稱: _departmentNameZh, ...contactFields } = contact;
+      rows.push({
+        ...contactFields,
+        team_id: teamId,
+        department_id: departmentId,
         is_active: true
-      }))
-    );
+      });
+    }
+    const { error } = await supabase.from("contacts").insert(rows);
     if (error) throw new Error(readableSupabaseError(error));
     return `已同步匯入 ${contacts.length} 筆人員。`;
   }

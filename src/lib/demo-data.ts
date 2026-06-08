@@ -1,10 +1,12 @@
 import type {
   Contact,
+  Department,
   Team,
   TemplateWithBlocks
 } from "@/types/database";
 
 export const demoTeams: Team[] = [];
+export const demoDepartments: Department[] = [];
 
 export const demoTemplates: TemplateWithBlocks[] = [
   {
@@ -166,6 +168,7 @@ export const demoContacts: Contact[] = [
   {
     id: "demo-contact-wang",
     team_id: "demo-team-main",
+    department_id: null,
     name: "王專員",
     title: "不動產顧問",
     mobile: "0912-345-678",

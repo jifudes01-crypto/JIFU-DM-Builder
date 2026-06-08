@@ -5,7 +5,7 @@ import { Image as KonvaImage, Layer, Rect, Stage, Text } from "react-konva";
 import type Konva from "konva";
 import QRCode from "qrcode";
 import type { TemplateCanvasPreviewProps } from "@/types/component-props";
-import type { Contact, TemplateBlock } from "@/types/database";
+import type { Contact, Department, Team, TemplateBlock } from "@/types/database";
 
 function useLoadedImage(src?: string | null) {
   const [image, setImage] = useState<HTMLImageElement | null>(null);
@@ -26,9 +26,11 @@ function useLoadedImage(src?: string | null) {
   return image;
 }
 
-function contactText(contact: Contact | null) {
+function contactText(contact: Contact | null, team?: Team | null, department?: Department | null) {
   if (!contact) return "請選擇聯絡人";
   return [
+    team?.name ? `團隊 ${team.name}` : "",
+    department?.name ? `部門 ${department.name}` : "",
     `${contact.name}${contact.title ? ` / ${contact.title}` : ""}`,
     contact.mobile ? `手機 ${contact.mobile}` : "",
     contact.phone ? `電話 ${contact.phone}` : "",
@@ -149,6 +151,8 @@ export function TemplateCanvasPreview({
   values,
   images,
   contact,
+  team,
+  department,
   scale = 0.45,
   stageRef,
   showGuides = false
@@ -201,7 +205,7 @@ export function TemplateCanvasPreview({
             {blocks.map((block) => {
               const text =
                 block.type === "contact"
-                  ? contactText(contact)
+                  ? contactText(contact, team, department)
                   : values[block.id] || values[block.label] || fallbackText(block);
 
               if (["image", "avatar", "logo"].includes(block.type)) {

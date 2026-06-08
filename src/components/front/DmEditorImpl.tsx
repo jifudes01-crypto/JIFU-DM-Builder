@@ -44,6 +44,7 @@ function dataUrlToPdfDataUrl(imageDataUrl: string, template: DmEditorProps["temp
 function createSchema(blocks: TemplateBlock[]) {
   return z
     .object({
+      departmentId: z.string().default(""),
       contactId: z.string().default(""),
       values: z.record(z.string()).default({}),
       images: z.record(z.string()).default({})
@@ -73,32 +74,62 @@ function createSchema(blocks: TemplateBlock[]) {
     });
 }
 
-export function DmEditor({ teamId, template, contacts }: DmEditorProps) {
+function normalizedLabel(value: string) {
+  return value.trim().toLowerCase().replace(/\s+/g, "");
+}
+
+function contactValueForBlock(label: string, data: {
+  teamName: string;
+  departmentName: string;
+  name: string;
+  title: string;
+  mobile: string;
+  phone: string;
+  line: string;
+  email: string;
+}) {
+  const normalized = normalizedLabel(label);
+  if (normalized.includes("團隊")) return data.teamName;
+  if (normalized.includes("部門")) return data.departmentName;
+  if (normalized.includes("姓名") || normalized.includes("業務") || normalized.includes("聯絡人")) return data.name;
+  if (normalized.includes("職稱") || normalized.includes("職務")) return data.title;
+  if (normalized.includes("手機") || normalized.includes("行動")) return data.mobile;
+  if (normalized.includes("電話") || normalized.includes("市話")) return data.phone;
+  if (normalized.includes("line")) return data.line;
+  if (normalized.includes("email") || normalized.includes("e-mail") || normalized.includes("信箱")) return data.email;
+  return "";
+}
+
+export function DmEditor({ teamId, team, template, departments, contacts }: DmEditorProps) {
   const stageRef = useRef<StageExportHandle | null>(null);
   const [message, setMessage] = useState("");
   const [batchRows, setBatchRows] = useState<BatchRow[]>([]);
   const [batchIndex, setBatchIndex] = useState(0);
   const [generated, setGenerated] = useState<{ png: string; jpg: string; pdf: string; saveKey: string } | null>(null);
   const schema = useMemo(() => createSchema(template.blocks), [template.blocks]);
-  const textBlocks = template.blocks.filter((block) => !isImageBlock(block) && block.type !== "qrcode");
-  const imageBlocks = template.blocks.filter((block) => isImageBlock(block));
+  const textBlocks = useMemo(() => template.blocks.filter((block) => !isImageBlock(block) && block.type !== "qrcode"), [template.blocks]);
+  const imageBlocks = useMemo(() => template.blocks.filter((block) => isImageBlock(block)), [template.blocks]);
 
   const form = useForm<EditorFormValues>({
     resolver: zodResolver(schema) as Resolver<EditorFormValues>,
     defaultValues: {
+      departmentId: "",
       contactId: contacts[0]?.id ?? "",
       values: {},
       images: {}
     }
   });
   const watched = form.watch();
-  const selectedContact = contacts.find((contact) => contact.id === watched.contactId) ?? null;
+  const selectedDepartment = departments.find((department) => department.id === watched.departmentId) ?? null;
+  const filteredContacts = contacts.filter((contact) => !watched.departmentId || contact.department_id === watched.departmentId);
+  const selectedContact = filteredContacts.find((contact) => contact.id === watched.contactId) ?? filteredContacts[0] ?? null;
   useEffect(() => {
     const raw = localStorage.getItem(getStorageKey(teamId, template.id));
     if (!raw) return;
     try {
       const saved = JSON.parse(raw) as EditorFormValues & { batchRows?: BatchRow[]; batchIndex?: number };
       form.reset({
+        departmentId: saved.departmentId || "",
         contactId: saved.contactId || contacts[0]?.id || "",
         values: saved.values || {},
         images: saved.images || {}
@@ -110,6 +141,42 @@ export function DmEditor({ teamId, template, contacts }: DmEditorProps) {
       localStorage.removeItem(getStorageKey(teamId, template.id));
     }
   }, [contacts, form, teamId, template.id]);
+
+  useEffect(() => {
+    if (!selectedContact && watched.contactId) {
+      form.setValue("contactId", "", { shouldValidate: true });
+      return;
+    }
+    if (selectedContact && selectedContact.id !== watched.contactId) {
+      form.setValue("contactId", selectedContact.id, { shouldValidate: true });
+    }
+  }, [form, selectedContact, watched.contactId]);
+
+  useEffect(() => {
+    if (!selectedContact) return;
+    const department = departments.find((item) => item.id === selectedContact.department_id) ?? selectedDepartment;
+    const data = {
+      teamName: team.name,
+      departmentName: department?.name ?? "",
+      name: selectedContact.name,
+      title: selectedContact.title ?? "",
+      mobile: selectedContact.mobile ?? "",
+      phone: selectedContact.phone ?? "",
+      line: selectedContact.line_id ?? "",
+      email: selectedContact.email ?? ""
+    };
+    const currentValues = form.getValues("values") ?? {};
+    const nextValues = { ...currentValues };
+    let changed = false;
+    textBlocks.forEach((block) => {
+      const nextValue = contactValueForBlock(block.label, data);
+      if (nextValue && nextValues[block.id] !== nextValue) {
+        nextValues[block.id] = nextValue;
+        changed = true;
+      }
+    });
+    if (changed) form.setValue("values", nextValues, { shouldValidate: true });
+  }, [departments, form, selectedContact, selectedDepartment, team.name, textBlocks]);
 
   useEffect(() => {
     localStorage.setItem(
@@ -214,17 +281,35 @@ export function DmEditor({ teamId, template, contacts }: DmEditorProps) {
         </div>
 
         <div className="card p-5">
-          <label className="field-label" htmlFor="contactId">
-            聯絡人
+          <label className="field-label" htmlFor="departmentId">
+            部門
           </label>
-          <select id="contactId" {...form.register("contactId")}>
-            {contacts.map((contact) => (
-              <option key={contact.id} value={contact.id}>
-                {contact.name} {contact.title ? `- ${contact.title}` : ""}
+          <select id="departmentId" {...form.register("departmentId")}>
+            <option value="">全部部門</option>
+            {departments.map((department) => (
+              <option key={department.id} value={department.id}>
+                {department.name}
               </option>
             ))}
           </select>
-          <p className="field-help">選擇後會自動帶入聯絡資訊、頭像與 QR Code。</p>
+          <p className="field-help">只會顯示目前團隊底下啟用中的部門。</p>
+        </div>
+
+        <div className="card p-5">
+          <label className="field-label" htmlFor="contactId">
+            業務
+          </label>
+          <select id="contactId" {...form.register("contactId")}>
+            {filteredContacts.map((contact) => {
+              const department = departments.find((item) => item.id === contact.department_id);
+              return (
+              <option key={contact.id} value={contact.id}>
+                {department ? `${department.name} / ` : ""}{contact.name} {contact.title ? `- ${contact.title}` : ""}
+              </option>
+              );
+            })}
+          </select>
+          <p className="field-help">選擇後會自動帶入團隊、部門、姓名、職稱、手機、電話、LINE、Email、頭像與 QR Code。</p>
         </div>
 
         <div className="card p-5">
@@ -313,6 +398,8 @@ export function DmEditor({ teamId, template, contacts }: DmEditorProps) {
               values={watched.values || {}}
               images={watched.images || {}}
               contact={selectedContact}
+              team={team}
+              department={selectedDepartment ?? departments.find((item) => item.id === selectedContact?.department_id) ?? null}
               stageRef={stageRef}
               scale={0.48}
             />

@@ -36,7 +36,7 @@ export function TeamsAdminClient({ initialTeams }: { initialTeams: Team[] }) {
 
       <TeamsImportForm onSuccess={refreshTeams} />
 
-      <StaticForm operation="create-team" onSuccess={refreshTeams} className="card grid gap-4 p-5 md:grid-cols-4">
+      <StaticForm operation="create-team" onSuccess={refreshTeams} encType="multipart/form-data" className="card grid gap-4 p-5 md:grid-cols-4">
         <label>
           <span className="field-label">團隊名稱</span>
           <input name="name" required />
@@ -48,6 +48,11 @@ export function TeamsAdminClient({ initialTeams }: { initialTeams: Team[] }) {
         <label>
           <span className="field-label">排序</span>
           <input name="sort_order" type="number" defaultValue={100} />
+        </label>
+        <label className="md:col-span-2">
+          <span className="field-label">小 Logo</span>
+          <input name="logo" type="file" accept="image/*" />
+          <span className="field-help">前台會以 56x56 小圖顯示。</span>
         </label>
         <div className="md:col-span-4">
           <button type="submit" className="btn btn-blue">
@@ -70,7 +75,17 @@ export function TeamsAdminClient({ initialTeams }: { initialTeams: Team[] }) {
           <tbody>
             {teams.map((team) => (
               <tr key={team.id}>
-                <td className="font-bold text-navy-900">{team.name}</td>
+                <td className="font-bold text-navy-900">
+                  <span className="flex items-center gap-3">
+                    {team.logo_url ? (
+                      // eslint-disable-next-line @next/next/no-img-element
+                      <img src={team.logo_url} alt="" className="h-14 w-14 rounded-lg border border-line object-cover" />
+                    ) : (
+                      <span className="grid h-14 w-14 place-items-center rounded-lg bg-navy-900 text-base font-black text-white">JF</span>
+                    )}
+                    {team.name}
+                  </span>
+                </td>
                 <td>{team.description || "-"}</td>
                 <td>{team.sort_order}</td>
                 <td>{team.is_active ? "啟用" : "停用"}</td>
@@ -92,7 +107,7 @@ export function TeamsAdminClient({ initialTeams }: { initialTeams: Team[] }) {
                   </div>
                   <details className="mt-3">
                     <summary className="cursor-pointer text-base font-bold text-action">編輯團隊</summary>
-                    <StaticForm operation="update-team" onSuccess={refreshTeams} resetOnSuccess={false} className="mt-3 grid gap-3 rounded-lg border border-line bg-slate-50 p-3 md:grid-cols-2">
+                    <StaticForm operation="update-team" onSuccess={refreshTeams} resetOnSuccess={false} encType="multipart/form-data" className="mt-3 grid gap-3 rounded-lg border border-line bg-slate-50 p-3 md:grid-cols-2">
                       <input type="hidden" name="team_id" value={team.id} />
                       <label>
                         <span className="field-label">團隊名稱</span>
@@ -105,6 +120,10 @@ export function TeamsAdminClient({ initialTeams }: { initialTeams: Team[] }) {
                       <label className="md:col-span-2">
                         <span className="field-label">簡易敘述</span>
                         <textarea name="description" defaultValue={team.description ?? ""} />
+                      </label>
+                      <label className="md:col-span-2">
+                        <span className="field-label">更換小 Logo</span>
+                        <input name="logo" type="file" accept="image/*" />
                       </label>
                       <button type="submit" className="btn btn-blue md:col-span-2">
                         更新團隊

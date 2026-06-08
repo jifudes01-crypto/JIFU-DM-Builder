@@ -55,11 +55,24 @@ create table if not exists teams (
   id uuid primary key default gen_random_uuid(),
   name text not null,
   description text,
+  logo_url text,
   slug text not null unique,
   is_active boolean not null default true,
   sort_order integer not null default 100,
   created_at timestamptz not null default now(),
   updated_at timestamptz not null default now()
+);
+
+create table if not exists departments (
+  id uuid primary key default gen_random_uuid(),
+  team_id uuid not null references teams(id) on delete cascade,
+  name text not null,
+  description text,
+  sort_order integer not null default 100,
+  is_active boolean not null default true,
+  created_at timestamptz not null default now(),
+  updated_at timestamptz not null default now(),
+  unique (team_id, name)
 );
 
 create table if not exists templates (
@@ -104,6 +117,7 @@ create table if not exists template_blocks (
 create table if not exists contacts (
   id uuid primary key default gen_random_uuid(),
   team_id uuid not null references teams(id) on delete cascade,
+  department_id uuid references departments(id) on delete set null,
   name text not null,
   title text,
   mobile text,
@@ -171,10 +185,17 @@ create table if not exists print_requests (
 
 create index if not exists idx_templates_team_status on templates(team_id, status);
 create index if not exists idx_template_blocks_template on template_blocks(template_id, z_index);
+create index if not exists idx_departments_team_active on departments(team_id, is_active, sort_order);
 create index if not exists idx_contacts_team_active on contacts(team_id, is_active);
+create index if not exists idx_contacts_department_active on contacts(department_id, is_active);
 create index if not exists idx_print_requests_status on print_requests(status, created_at desc);
 
 alter table teams add column if not exists description text;
+alter table teams add column if not exists logo_url text;
+alter table departments add column if not exists description text;
+alter table departments add column if not exists sort_order integer not null default 100;
+alter table departments add column if not exists is_active boolean not null default true;
+alter table contacts add column if not exists department_id uuid references departments(id) on delete set null;
 alter table templates add column if not exists description text;
 alter table print_options add column if not exists vendor text;
 alter table print_requests add column if not exists total_quantity integer not null default 0;
@@ -184,6 +205,9 @@ alter table print_requests add column if not exists batch_items jsonb not null d
 
 drop trigger if exists teams_set_updated_at on teams;
 create trigger teams_set_updated_at before update on teams for each row execute function set_updated_at();
+
+drop trigger if exists departments_set_updated_at on departments;
+create trigger departments_set_updated_at before update on departments for each row execute function set_updated_at();
 
 drop trigger if exists templates_set_updated_at on templates;
 create trigger templates_set_updated_at before update on templates for each row execute function set_updated_at();
@@ -219,6 +243,7 @@ values
   ('cutting', '需要裁切', 'yes', null, 1);
 
 alter table teams enable row level security;
+alter table departments enable row level security;
 alter table templates enable row level security;
 alter table template_blocks enable row level security;
 alter table contacts enable row level security;
@@ -231,6 +256,12 @@ create policy "public read active teams" on teams for select to anon, authentica
 drop policy if exists "admins write teams" on teams;
 drop policy if exists "public manage teams" on teams;
 create policy "public manage teams" on teams for all to anon, authenticated using (true) with check (true);
+
+drop policy if exists "public read active departments" on departments;
+create policy "public read active departments" on departments for select to anon, authenticated using (true);
+drop policy if exists "admins write departments" on departments;
+drop policy if exists "public manage departments" on departments;
+create policy "public manage departments" on departments for all to anon, authenticated using (true) with check (true);
 
 drop policy if exists "public read published templates" on templates;
 create policy "public read published templates" on templates for select to anon, authenticated using (true);

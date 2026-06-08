@@ -24,11 +24,24 @@ export interface Team {
   id: string;
   name: string;
   description: string | null;
+  logo_url: string | null;
   slug: string;
   is_active: boolean;
   sort_order: number;
   created_at?: string;
   updated_at?: string;
+}
+
+export interface Department {
+  id: string;
+  team_id: string;
+  name: string;
+  description: string | null;
+  sort_order: number;
+  is_active: boolean;
+  created_at?: string;
+  updated_at?: string;
+  teams?: Pick<Team, "name"> | null;
 }
 
 export interface Template {
@@ -73,6 +86,7 @@ export interface TemplateBlock {
 export interface Contact {
   id: string;
   team_id: string;
+  department_id: string | null;
   name: string;
   title: string | null;
   mobile: string | null;
@@ -85,6 +99,7 @@ export interface Contact {
   notes: string | null;
   created_at?: string;
   updated_at?: string;
+  departments?: Pick<Department, "name"> | null;
 }
 
 export interface PrintOption {
@@ -160,6 +175,7 @@ export interface TemplateWithBlocks extends Template {
 }
 
 export interface EditorFormValues {
+  departmentId: string;
   contactId: string;
   values: Record<string, string>;
   images: Record<string, string>;

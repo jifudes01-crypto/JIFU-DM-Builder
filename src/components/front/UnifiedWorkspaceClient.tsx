@@ -3,21 +3,23 @@
 import Link from "next/link";
 import { useEffect, useState } from "react";
 import { loadPublicWorkspaceData } from "@/lib/supabase-public-data";
-import type { Contact, Team, Template } from "@/types/database";
+import type { Contact, Department, Team, Template } from "@/types/database";
 
 interface UnifiedWorkspaceClientProps {
   teams?: Team[];
+  departments?: Department[];
   templates?: Array<Template & { block_count?: number }>;
   contacts?: Contact[];
 }
 
 export function UnifiedWorkspaceClient({
   teams = [],
+  departments = [],
   templates = [],
   contacts = []
 }: UnifiedWorkspaceClientProps) {
   const [tab, setTab] = useState<"front" | "admin">("front");
-  const [data, setData] = useState({ teams, templates, contacts });
+  const [data, setData] = useState({ teams, departments, templates, contacts });
   const [message, setMessage] = useState("");
   const [loading, setLoading] = useState(true);
 
@@ -51,6 +53,7 @@ export function UnifiedWorkspaceClient({
 
   const adminCards = [
     { label: "團隊", value: data.teams.length, href: "/admin/teams" },
+    { label: "部門", value: data.departments.length, href: "/admin/departments" },
     { label: "模板", value: data.templates.length, href: "/admin/templates" },
     { label: "通訊錄", value: data.contacts.length, href: "/admin/contacts" }
   ];
@@ -89,7 +92,15 @@ export function UnifiedWorkspaceClient({
               {data.teams.map((team) => (
                 <Link key={team.id} href={`/templates?team=${team.id}`} className="step-card">
                   <span className="status-pill border-blue-200 bg-blue-50 text-navy-800">啟用中</span>
-                  <h3 className="mt-4 text-2xl font-black text-navy-900">{team.name}</h3>
+                  <h3 className="mt-4 flex items-center gap-3 text-2xl font-black text-navy-900">
+                    {team.logo_url ? (
+                      // eslint-disable-next-line @next/next/no-img-element
+                      <img src={team.logo_url} alt="" className="h-14 w-14 rounded-lg border border-line object-cover" />
+                    ) : (
+                      <span className="grid h-14 w-14 shrink-0 place-items-center rounded-lg bg-navy-900 text-base font-black text-white">JF</span>
+                    )}
+                    <span>{team.name}</span>
+                  </h3>
                   <p className="mt-3 text-base leading-7 text-slate-600">{team.description || "請由後台補上這個團隊的簡易敘述。"}</p>
                   <span className="btn btn-primary mt-5 w-full">選擇這個團隊</span>
                 </Link>
