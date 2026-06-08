@@ -20,8 +20,8 @@ export default async function AdminPage() {
     <section>
       <div className="mb-6 rounded-lg bg-white p-6 shadow-tight">
         <p className="eyebrow">Admin</p>
-        <h1 className="section-title">吉富 DM 管理後台</h1>
-        <p className="section-subtitle">後台設定模板、框選可編輯區域、維護團隊與通訊錄。</p>
+        <h1 className="section-title">共用模板中心管理後台</h1>
+        <p className="section-subtitle">後台設定團隊、部門、模板、通訊錄與可編輯區域。</p>
       </div>
       <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
         {cards.map((card) => (

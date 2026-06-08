@@ -83,8 +83,8 @@ export function TemplatesPageClient({ teams = [], templates = [] }: TemplatesPag
     <main className="page-shell">
       <section className="mb-6 rounded-lg bg-white p-6 shadow-tight">
         <p className="eyebrow">Step 2</p>
-        <h1 className="section-title">選擇模板</h1>
-        <p className="section-subtitle">{team.description || `${team.name} 目前只會顯示已上架且完成區塊設定的模板。`}</p>
+        <h1 className="section-title">{team.name}｜選擇模板</h1>
+        <p className="section-subtitle">只顯示此團隊已上架的模板。選擇模板後即可進入編輯器。</p>
         <button type="button" className="btn btn-secondary mt-4" onClick={refreshEditorData}>
           重新整理模板
         </button>
@@ -115,17 +115,14 @@ export function TemplatesPageClient({ teams = [], templates = [] }: TemplatesPag
               </div>
               <h2 className="mt-4 text-2xl font-black text-navy-900">{template.name}</h2>
               <p className="mt-2 text-base leading-7 text-slate-600">{template.description || template.category}</p>
-              <span className="btn btn-primary mt-5 w-full">使用這個模板</span>
+              <span className="btn btn-primary mt-5 w-full">開始編輯</span>
             </Link>
           ))}
         </section>
       ) : (
         <div className="card p-6">
           <h2 className="text-xl font-black text-navy-900">此團隊目前尚無可用模板</h2>
-          <p className="section-subtitle">請到後台確認模板已上架 published，並完成區塊設定。後台新增或上架後，前台按重新整理即可看到。</p>
-          <Link href="/admin/templates" className="btn btn-primary mt-4">
-            到後台模板管理
-          </Link>
+          <p className="section-subtitle">請通知管理者至後台新增並上架模板。模板上架後，前台按重新整理即可看到。</p>
         </div>
       )}
     </main>
