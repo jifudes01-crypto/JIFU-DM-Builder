@@ -45,40 +45,62 @@ export function UnifiedWorkspaceClient({
 
   return (
     <main className="page-shell">
+      <div className="mb-6 flex justify-end">
+        <Link href="/admin" className="btn btn-primary">
+          管理後台
+        </Link>
+      </div>
+
       <section className="mb-6 rounded-2xl bg-white p-6 shadow-tight">
         <p className="eyebrow">Shared Template Center</p>
         <h1 className="section-title">共用模板中心</h1>
-        <p className="section-subtitle">請選擇您的團隊，進入後即可挑選該團隊可使用的模板並開始編輯。</p>
+        <p className="section-subtitle">
+          請選擇您的團隊，進入後即可選擇團隊專屬模板進行編輯。
+        </p>
       </section>
 
-      {loading ? <div className="mb-6 rounded-lg bg-blue-50 p-4 font-bold text-navy-900">資料載入中...</div> : null}
-      {message ? <div className="mb-6 rounded-lg bg-blue-50 p-4 font-bold text-navy-900">{message}</div> : null}
+      {loading ? (
+        <div className="mb-6 rounded-lg bg-blue-50 p-4 font-bold text-navy-900">
+          資料載入中...
+        </div>
+      ) : null}
+
+      {message ? (
+        <div className="mb-6 rounded-lg bg-blue-50 p-4 font-bold text-navy-900">
+          {message}
+        </div>
+      ) : null}
 
       <section>
-        <div className="mb-6 rounded-lg bg-white p-6 shadow-tight">
-          <p className="eyebrow">Step 1</p>
-          <h2 className="section-title">選擇團隊</h2>
-          <p className="section-subtitle">點選團隊後，系統會顯示該團隊已上架的模板。</p>
-          <button type="button" className="btn btn-secondary mt-4" onClick={refreshWorkspaceData}>
-            重新整理團隊
-          </button>
-        </div>
-
         {data.teams.length ? (
           <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
             {data.teams.map((team) => (
               <Link key={team.id} href={`/templates?team=${team.id}`} className="step-card">
-                <span className="status-pill border-blue-200 bg-blue-50 text-navy-800">啟用中</span>
+                <span className="status-pill border-blue-200 bg-blue-50 text-navy-800">
+                  啟用中
+                </span>
+
                 <div className="mt-4 flex items-center gap-4">
                   {team.logo_url ? (
                     // eslint-disable-next-line @next/next/no-img-element
-                    <img src={team.logo_url} alt={`${team.name} Logo`} className="h-14 w-14 shrink-0 rounded-lg border border-line object-contain" />
+                    <img
+                      src={team.logo_url}
+                      alt={`${team.name} Logo`}
+                      className="h-14 w-14 shrink-0 rounded-lg border border-line object-contain"
+                    />
                   ) : (
-                    <span className="grid h-14 w-14 shrink-0 place-items-center rounded-lg bg-navy-900 text-base font-black text-white">ST</span>
+                    <span className="grid h-14 w-14 shrink-0 place-items-center rounded-lg bg-navy-900 text-base font-black text-white">
+                      ST
+                    </span>
                   )}
+
                   <h3 className="text-2xl font-black text-navy-900">{team.name}</h3>
                 </div>
-                <p className="mt-3 text-base leading-7 text-slate-600">{team.description || "請由後台補上這個團隊的簡易敘述。"}</p>
+
+                <p className="mt-3 text-base leading-7 text-slate-600">
+                  {team.description || "請由後台補上這個團隊的簡易敘述。"}
+                </p>
+
                 <span className="btn btn-primary mt-5 w-full">進入團隊</span>
               </Link>
             ))}
@@ -86,7 +108,9 @@ export function UnifiedWorkspaceClient({
         ) : (
           <div className="card p-6">
             <h3 className="text-xl font-black text-navy-900">目前尚無可用團隊</h3>
-            <p className="section-subtitle">請由後台先新增或啟用團隊。新增後重新整理前台即可看到。</p>
+            <p className="section-subtitle">
+              請由後台先新增或啟用團隊。新增後重新整理前台即可看到。
+            </p>
           </div>
         )}
       </section>
