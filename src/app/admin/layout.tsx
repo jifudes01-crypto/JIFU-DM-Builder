@@ -13,10 +13,10 @@ const links = [
 export default function AdminLayout({ children }: { children: ReactNode }) {
   return (
     <main className="page-shell">
-      <div className="mb-6 rounded-lg border border-line bg-white p-3 shadow-tight">
+      <div className="mb-6 rounded-2xl border border-gold-300/25 bg-navy-900 p-3 shadow-luxury">
         <nav className="flex flex-wrap gap-2">
           {links.map((link) => (
-            <Link key={link.href} href={link.href} className="btn btn-muted">
+            <Link key={link.href} href={link.href} className="btn border-white/10 bg-white/8 text-white hover:border-gold-300 hover:bg-gold-500 hover:text-navy-900">
               {link.label}
             </Link>
           ))}

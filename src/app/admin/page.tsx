@@ -18,16 +18,17 @@ export default async function AdminPage() {
 
   return (
     <section>
-      <div className="mb-6 rounded-lg bg-white p-6 shadow-tight">
-        <p className="eyebrow">Admin</p>
-        <h1 className="section-title">共用模板中心管理後台</h1>
-        <p className="section-subtitle">後台設定團隊、部門、模板、通訊錄與可編輯區域。</p>
+      <div className="luxury-panel mb-6">
+        <p className="text-sm font-black uppercase tracking-normal text-gold-300">Admin Console</p>
+        <h1 className="mt-2 text-3xl font-black text-white">吉富 DM 管理後台</h1>
+        <p className="mt-3 max-w-2xl text-base leading-7 text-slate-200">集中維護團隊、部門、模板、通訊錄與可編輯區域，讓前台快速產出一致的高質感 DM。</p>
       </div>
-      <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
+      <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
         {cards.map((card) => (
-          <Link key={card.label} href={card.href} className="card p-5">
-            <p className="text-base font-bold text-slate-500">{card.label}</p>
+          <Link key={card.label} href={card.href} className="card group p-5 transition hover:-translate-y-0.5 hover:border-gold-500 hover:shadow-luxury">
+            <p className="text-base font-black text-slate-500">{card.label}</p>
             <p className="mt-3 text-4xl font-black text-navy-900">{card.value}</p>
+            <span className="mt-5 inline-flex text-sm font-black text-gold-700 group-hover:text-navy-900">進入管理</span>
           </Link>
         ))}
       </div>

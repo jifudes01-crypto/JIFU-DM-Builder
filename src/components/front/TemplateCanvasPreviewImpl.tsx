@@ -180,14 +180,14 @@ export function TemplateCanvasPreview({
   }, [contact]);
 
   return (
-    <div className="overflow-auto rounded-lg border border-line bg-slate-100 p-4">
+    <div className="overflow-auto rounded-2xl border border-line bg-[radial-gradient(circle_at_top,#ffffff_0%,#eef2f7_70%)] p-4 shadow-inner">
       <div style={{ width: template.width * scale, height: template.height * scale }}>
         <Stage
           ref={setStageRef}
           width={template.width}
           height={template.height}
           style={{ transform: `scale(${scale})`, transformOrigin: "top left" }}
-          className="rounded-lg bg-white shadow-panel"
+          className="rounded-xl bg-white shadow-panel"
         >
           <Layer>
             <Rect x={0} y={0} width={template.width} height={template.height} fill="#ffffff" />

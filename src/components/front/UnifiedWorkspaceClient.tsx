@@ -46,27 +46,39 @@ export function UnifiedWorkspaceClient({
   return (
     <main className="page-shell">
       <div className="mb-6 flex justify-end">
-        <Link href="/admin" className="btn btn-primary">
+        <Link href="/admin" className="btn btn-secondary">
           管理後台
         </Link>
       </div>
 
-      <section className="mb-6 rounded-2xl bg-white p-6 shadow-tight">
-        <p className="eyebrow">Shared Template Center</p>
-        <h1 className="section-title">共用模板中心</h1>
-        <p className="section-subtitle">
-          請選擇您的團隊，進入後即可選擇團隊專屬模板進行編輯。
+      <section className="luxury-panel mb-6">
+        <p className="text-sm font-black uppercase tracking-normal text-gold-300">Ji Fu DM Builder</p>
+        <h1 className="mt-2 text-3xl font-black text-white sm:text-4xl">吉富 DM 套版系統</h1>
+        <p className="mt-3 max-w-2xl text-base leading-7 text-slate-200">
+          為不動產、商辦、豪宅與工商地產團隊打造的專業 DM 製作入口。請選擇團隊後進入專屬模板。
         </p>
+        <div className="mt-6 grid gap-3 sm:grid-cols-3">
+          {[
+            { label: "啟用團隊", value: data.teams.length },
+            { label: "上架模板", value: data.templates.length },
+            { label: "通訊錄", value: data.contacts.length }
+          ].map((item) => (
+            <div key={item.label} className="rounded-xl border border-white/10 bg-white/8 p-4">
+              <p className="text-sm font-bold text-slate-300">{item.label}</p>
+              <p className="mt-2 text-3xl font-black text-gold-300">{item.value}</p>
+            </div>
+          ))}
+        </div>
       </section>
 
       {loading ? (
-        <div className="mb-6 rounded-lg bg-blue-50 p-4 font-bold text-navy-900">
+        <div className="mb-6 rounded-xl border border-gold-300/40 bg-gold-50 p-4 font-bold text-navy-900">
           資料載入中...
         </div>
       ) : null}
 
       {message ? (
-        <div className="mb-6 rounded-lg bg-blue-50 p-4 font-bold text-navy-900">
+        <div className="mb-6 rounded-xl border border-gold-300/40 bg-gold-50 p-4 font-bold text-navy-900">
           {message}
         </div>
       ) : null}
@@ -76,7 +88,7 @@ export function UnifiedWorkspaceClient({
           <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
             {data.teams.map((team) => (
               <Link key={team.id} href={`/templates?team=${team.id}`} className="step-card">
-                <span className="status-pill border-blue-200 bg-blue-50 text-navy-800">
+                <span className="status-pill border-gold-300 bg-gold-50 text-gold-700">
                   啟用中
                 </span>
 
@@ -89,8 +101,8 @@ export function UnifiedWorkspaceClient({
                       className="h-14 w-14 shrink-0 rounded-lg border border-line object-contain"
                     />
                   ) : (
-                    <span className="grid h-14 w-14 shrink-0 place-items-center rounded-lg bg-navy-900 text-base font-black text-white">
-                      ST
+                    <span className="grid h-14 w-14 shrink-0 place-items-center rounded-lg bg-gradient-to-br from-gold-300 to-gold-700 text-base font-black text-navy-900">
+                      JF
                     </span>
                   )}
 

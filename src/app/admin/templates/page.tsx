@@ -7,10 +7,10 @@ export default async function AdminTemplatesPage() {
 
   return (
     <section className="space-y-6">
-      <div className="rounded-lg bg-white p-6 shadow-tight">
-        <p className="eyebrow">模板管理</p>
-        <h1 className="section-title">模板管理</h1>
-        <p className="section-subtitle">上架模板才會顯示在前台；沒有區塊設定的模板不能進入製作。</p>
+      <div className="luxury-panel">
+        <p className="text-sm font-black uppercase tracking-normal text-gold-300">Templates</p>
+        <h1 className="mt-2 text-3xl font-black text-white">模板管理</h1>
+        <p className="mt-3 text-base leading-7 text-slate-200">上架模板才會顯示在前台；沒有區塊設定的模板不能進入製作。</p>
       </div>
 
       <StaticForm operation="create-template" encType="multipart/form-data" className="card grid gap-4 p-5 lg:grid-cols-3">
@@ -95,7 +95,7 @@ export default async function AdminTemplatesPage() {
                   <td>{template.size_label}</td>
                   <td>{template.block_count ?? 0}</td>
                   <td>
-                    <span className="status-pill border-line bg-white text-slate-700">
+                    <span className="status-pill border-gold-300 bg-gold-50 text-gold-700">
                       {template.status === "published" ? "上架" : template.status === "archived" ? "封存" : "草稿"}
                     </span>
                   </td>

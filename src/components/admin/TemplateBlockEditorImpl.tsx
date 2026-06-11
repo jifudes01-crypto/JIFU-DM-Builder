@@ -136,7 +136,7 @@ export function TemplateBlockEditor({ template }: TemplateBlockEditorProps) {
             </button>
           ))}
         </div>
-        <div className="overflow-auto rounded-lg border border-line bg-slate-100 p-4">
+          <div className="overflow-auto rounded-2xl border border-line bg-[radial-gradient(circle_at_top,#ffffff_0%,#eef2f7_70%)] p-4">
           <div style={{ width: template.width * scale, height: template.height * scale }}>
             <Stage
               width={template.width}
@@ -313,7 +313,7 @@ export function TemplateBlockEditor({ template }: TemplateBlockEditorProps) {
         <div className="card p-5">
           <h2 className="text-xl font-black text-navy-900">同步預覽</h2>
           <p className="section-subtitle">這裡會同步顯示目前區塊位置，不必跳到前台查看。</p>
-          <div className="mt-4 overflow-auto rounded-lg border border-line bg-slate-100 p-3">
+            <div className="mt-4 overflow-auto rounded-2xl border border-line bg-[radial-gradient(circle_at_top,#ffffff_0%,#eef2f7_70%)] p-3">
             <div style={{ width: template.width * Math.min(0.34, 320 / template.width), height: template.height * Math.min(0.34, 320 / template.width) }}>
               <Stage
                 width={template.width}

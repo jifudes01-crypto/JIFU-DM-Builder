@@ -78,10 +78,10 @@ export function TemplateBlockRouteClient() {
 
   return (
     <section className="space-y-6">
-      <div className="rounded-lg bg-white p-6 shadow-tight">
-        <p className="eyebrow">區塊設定</p>
-        <h1 className="section-title">{template.name}</h1>
-        <p className="section-subtitle">拖曳、縮放或刪除可編輯區塊，前台版面會依照這裡的設定顯示。</p>
+      <div className="luxury-panel">
+        <p className="text-sm font-black uppercase tracking-normal text-gold-300">Block Editor</p>
+        <h1 className="mt-2 text-3xl font-black text-white">{template.name}</h1>
+        <p className="mt-3 text-base leading-7 text-slate-200">拖曳、縮放或刪除可編輯區塊，前台版面會依照這裡的設定顯示。</p>
       </div>
       <TemplateBlockEditorClient template={template} />
     </section>

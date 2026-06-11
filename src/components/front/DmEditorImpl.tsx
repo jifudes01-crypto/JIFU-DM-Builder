@@ -274,10 +274,10 @@ export function DmEditor({ teamId, team, template, departments, contacts }: DmEd
   return (
     <div className="grid gap-6 lg:grid-cols-[minmax(360px,460px)_1fr]">
       <section className="space-y-5">
-        <div className="card p-5">
-          <p className="eyebrow">Step 3</p>
-          <h1 className="section-title">填寫內容</h1>
-          <p className="section-subtitle">版面由後台鎖定，前台只填資料與上傳圖片。</p>
+        <div className="luxury-panel">
+          <p className="text-sm font-black uppercase tracking-normal text-gold-300">Step 3</p>
+          <h1 className="mt-2 text-3xl font-black text-white">填寫內容</h1>
+          <p className="mt-3 text-base leading-7 text-slate-200">版面由後台鎖定，前台只填資料與上傳圖片。</p>
         </div>
 
         <div className="card p-5">
@@ -390,7 +390,7 @@ export function DmEditor({ teamId, team, template, departments, contacts }: DmEd
               <p className="eyebrow">Step 4</p>
               <h2 className="section-title">即時預覽</h2>
             </div>
-            <span className="status-pill border-blue-200 bg-blue-50 text-navy-800">{template.size_label}</span>
+            <span className="status-pill border-gold-300 bg-gold-50 text-gold-700">{template.size_label}</span>
           </div>
           <div className="mt-5">
             <TemplateCanvasPreview
@@ -421,10 +421,10 @@ export function DmEditor({ teamId, team, template, departments, contacts }: DmEd
             </button>
           </div>
           {generated ? (
-            <div className="mt-5 rounded-lg border border-line bg-slate-50 p-4">
+            <div className="mt-5 rounded-xl border border-gold-300/40 bg-gold-50 p-4">
               <p className="text-base font-bold text-navy-900">手機或 LINE 無法下載時，請長按下方圖片儲存。</p>
               {/* eslint-disable-next-line @next/next/no-img-element */}
-              <img src={generated.png} alt="可長按儲存的 DM 圖片" className="mt-3 w-full rounded-lg border border-line bg-white" />
+              <img src={generated.png} alt="可長按儲存的 DM 圖片" className="mt-3 w-full rounded-xl border border-line bg-white" />
               <a className="btn btn-primary mt-4 w-full" href={`/save?key=${generated.saveKey}`} target="_blank" rel="noreferrer">
                 開啟專用儲存頁
               </a>

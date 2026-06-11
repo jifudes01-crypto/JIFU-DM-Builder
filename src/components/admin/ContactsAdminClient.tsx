@@ -215,10 +215,10 @@ export function ContactsAdminClient({ initialTeams, initialDepartments, initialC
 
   return (
     <section className="space-y-6">
-      <div className="rounded-lg bg-white p-6 shadow-tight">
-        <p className="eyebrow">通訊錄</p>
-        <h1 className="section-title">通訊錄管理</h1>
-        <p className="section-subtitle">人員可綁定團隊與部門，前台會依選擇的部門篩選業務。</p>
+      <div className="luxury-panel">
+        <p className="text-sm font-black uppercase tracking-normal text-gold-300">Contacts</p>
+        <h1 className="mt-2 text-3xl font-black text-white">通訊錄管理</h1>
+        <p className="mt-3 text-base leading-7 text-slate-200">人員可綁定團隊與部門，前台會依選擇的部門篩選業務。</p>
       </div>
 
       {message ? <p className="rounded-lg bg-amber-50 p-4 text-base font-bold text-amber-900">{message}</p> : null}
