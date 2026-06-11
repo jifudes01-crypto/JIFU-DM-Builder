@@ -8,6 +8,7 @@ import * as XLSX from "xlsx";
 import { z } from "zod";
 import { ImageUploadField } from "@/components/front/ImageUploadField";
 import { TemplateCanvasPreview } from "@/components/front/TemplateCanvasPreview";
+import { createSupabaseBrowserClient } from "@/lib/supabase-browser";
 import type { DmEditorProps, StageExportHandle } from "@/types/component-props";
 import type {
   BatchRow,
@@ -28,6 +29,16 @@ function downloadDataUrl(dataUrl: string, filename: string) {
   link.href = dataUrl;
   link.download = filename;
   link.click();
+}
+
+function readableSyncError(error: unknown) {
+  if (!error || typeof error !== "object") return error instanceof Error ? error.message : "同步下載紀錄失敗。";
+  const detail = error as { message?: string; code?: string; details?: string; hint?: string };
+  const text = `${detail.message ?? ""} ${detail.details ?? ""} ${detail.hint ?? ""}`.toLowerCase();
+  if (text.includes("bucket not found") || (text.includes("bucket") && text.includes("not found"))) {
+    return "Supabase Storage bucket 找不到，請確認 dm-exports 已建立。";
+  }
+  return [detail.message, detail.code ? `代碼：${detail.code}` : "", detail.details, detail.hint].filter(Boolean).join(" / ") || "同步下載紀錄失敗。";
 }
 
 function dataUrlToPdfDataUrl(imageDataUrl: string, template: DmEditorProps["template"]) {
@@ -257,15 +268,49 @@ export function DmEditor({ teamId, team, template, departments, contacts }: DmEd
     }
   }
 
+  async function recordDownload(format: "png" | "jpg" | "pdf", dataUrl: string) {
+    const supabase = await createSupabaseBrowserClient();
+    const blob = await fetch(dataUrl).then((response) => response.blob());
+    const ext = format === "jpg" ? "jpg" : format;
+    const path = `downloads/${teamId}/${template.id}/${crypto.randomUUID()}.${ext}`;
+    const { error: uploadError } = await supabase.storage.from("dm-exports").upload(path, blob, {
+      contentType: blob.type || (format === "pdf" ? "application/pdf" : `image/${format}`),
+      upsert: false
+    });
+    if (uploadError) throw new Error(readableSyncError(uploadError));
+
+    const fileUrl = supabase.storage.from("dm-exports").getPublicUrl(path).data.publicUrl;
+    const { error } = await supabase.from("exports").insert({
+      team_id: teamId,
+      template_id: template.id,
+      contact_id: selectedContact?.id ?? null,
+      format,
+      file_url: fileUrl,
+      preview_url: format === "pdf" ? null : fileUrl,
+      payload: {
+        teamName: team.name,
+        templateName: template.name,
+        contactName: selectedContact?.name ?? "",
+        batchLabel: batchRows[batchIndex]?.label ?? ""
+      }
+    });
+    if (error) throw new Error(readableSyncError(error));
+  }
+
   async function handleDownload(format: "png" | "jpg" | "pdf") {
     try {
       setMessage("正在準備下載檔案...");
-      const exports = await createExports();
+      const generatedExports = await createExports();
       const name = `${template.name}-${batchRows[batchIndex]?.label || "DM"}`;
-      if (format === "png") downloadDataUrl(exports.png, `${name}.png`);
-      if (format === "jpg") downloadDataUrl(exports.jpg, `${name}.jpg`);
-      if (format === "pdf") downloadDataUrl(exports.pdf, `${name}.pdf`);
-      setMessage("下載已開始。");
+      if (format === "png") downloadDataUrl(generatedExports.png, `${name}.png`);
+      if (format === "jpg") downloadDataUrl(generatedExports.jpg, `${name}.jpg`);
+      if (format === "pdf") downloadDataUrl(generatedExports.pdf, `${name}.pdf`);
+      try {
+        await recordDownload(format, generatedExports[format]);
+        setMessage("下載已開始，下載紀錄已同步。");
+      } catch (recordError) {
+        setMessage(`下載已開始，但下載紀錄同步失敗：${recordError instanceof Error ? recordError.message : "請稍後再試。"}`);
+      }
     } catch (error) {
       setMessage(error instanceof Error ? error.message : "下載失敗，請再試一次。");
     }

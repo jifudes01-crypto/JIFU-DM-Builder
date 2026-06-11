@@ -2,7 +2,12 @@
 
 import type { SupabaseClient } from "@supabase/supabase-js";
 import { createSupabaseBrowserClient } from "@/lib/supabase-browser";
-import type { BlockType, Contact, Department, Team, TemplateBlock } from "@/types/database";
+import type { BlockType, Contact, Department, ExportRecord, SiteSettings, Team, Template, TemplateBlock } from "@/types/database";
+
+const SITE_ASSETS_BUCKET = "site-assets";
+const TEMPLATE_ASSETS_BUCKET = "template-assets";
+const CONTACT_ASSETS_BUCKET = "contact-assets";
+const DM_EXPORTS_BUCKET = "dm-exports";
 
 function textValue(formData: FormData, key: string, fallback = "") {
   return String(formData.get(key) ?? fallback).trim();
@@ -26,7 +31,18 @@ function slugValue(value: string) {
 function readableSupabaseError(error: unknown) {
   if (!error || typeof error !== "object") return error instanceof Error ? error.message : "同步失敗，請稍後再試。";
   const detail = error as { message?: string; code?: string; details?: string; hint?: string; status?: number };
+  const text = `${detail.message ?? ""} ${detail.details ?? ""} ${detail.hint ?? ""}`.toLowerCase();
+  if (text.includes("bucket not found") || text.includes("bucket") && text.includes("not found")) {
+    return `Supabase Storage bucket 找不到。請確認已執行 supabase/schema.sql，並建立 ${SITE_ASSETS_BUCKET}、${TEMPLATE_ASSETS_BUCKET}、${CONTACT_ASSETS_BUCKET}、${DM_EXPORTS_BUCKET}。`;
+  }
   return [detail.message, detail.code ? `代碼：${detail.code}` : "", detail.details, detail.hint].filter(Boolean).join(" / ") || "同步失敗，請稍後再試。";
+}
+
+function isBucketMissing(error: unknown) {
+  if (!error || typeof error !== "object") return false;
+  const detail = error as { message?: string; details?: string; hint?: string };
+  const text = `${detail.message ?? ""} ${detail.details ?? ""} ${detail.hint ?? ""}`.toLowerCase();
+  return text.includes("bucket not found") || (text.includes("bucket") && text.includes("not found"));
 }
 
 function isMissingDepartmentSchema(error: unknown) {
@@ -54,9 +70,17 @@ async function uploadFile(bucket: string, file: File | null, prefix: string) {
   const ext = file.name.split(".").pop() || "png";
   const path = `${prefix}/${crypto.randomUUID()}.${ext}`;
   const supabase = await createSupabaseBrowserClient();
-  const { error } = await supabase.storage.from(bucket).upload(path, file, { upsert: false });
+  let targetBucket = bucket;
+  let { error } = await supabase.storage.from(targetBucket).upload(path, file, { upsert: false });
+
+  if (error && targetBucket === SITE_ASSETS_BUCKET && isBucketMissing(error)) {
+    targetBucket = CONTACT_ASSETS_BUCKET;
+    const fallback = await supabase.storage.from(targetBucket).upload(path, file, { upsert: false });
+    error = fallback.error;
+  }
+
   if (error) throw new Error(readableSupabaseError(error));
-  return supabase.storage.from(bucket).getPublicUrl(path).data.publicUrl;
+  return supabase.storage.from(targetBucket).getPublicUrl(path).data.publicUrl;
 }
 
 export async function listTeamsForAdmin() {
@@ -88,6 +112,48 @@ export async function listContactsForAdmin() {
   return (data ?? []) as Contact[];
 }
 
+export async function listTemplatesForAdmin() {
+  const supabase = await createSupabaseBrowserClient();
+  const pageSize = 1000;
+  const rows: Array<Template & { template_blocks?: Array<{ count?: number }> }> = [];
+
+  for (let from = 0; ; from += pageSize) {
+    const { data, error } = await supabase
+      .from("templates")
+      .select("*, template_blocks(count)")
+      .order("updated_at", { ascending: false })
+      .range(from, from + pageSize - 1);
+
+    if (error) throw new Error(readableSupabaseError(error));
+    const page = (data ?? []) as Array<Template & { template_blocks?: Array<{ count?: number }> }>;
+    rows.push(...page);
+    if (page.length < pageSize) break;
+  }
+
+  return rows.map((item) => ({
+    ...(item as Template),
+    block_count: item.template_blocks?.[0]?.count ?? 0
+  }));
+}
+
+export async function getSiteSettingsForAdmin() {
+  const supabase = await createSupabaseBrowserClient();
+  const { data, error } = await supabase.from("site_settings").select("*").eq("id", "main").maybeSingle();
+  if (error) throw new Error(readableSupabaseError(error));
+  return (data as SiteSettings | null) ?? null;
+}
+
+export async function listExportRecordsForAdmin() {
+  const supabase = await createSupabaseBrowserClient();
+  const { data, error } = await supabase
+    .from("exports")
+    .select("*, teams(name), templates(name), contacts(name, mobile)")
+    .order("created_at", { ascending: false });
+
+  if (error) throw new Error(readableSupabaseError(error));
+  return (data ?? []) as ExportRecord[];
+}
+
 async function findTeamByName(supabase: SupabaseClient, name: string) {
   if (!name) return null;
   const { data, error } = await supabase.from("teams").select("id").eq("name", name).maybeSingle();
@@ -112,7 +178,7 @@ export async function runAdminOperation(operation: string, formData: FormData) {
 
   if (operation === "create-team") {
     const name = textValue(formData, "name");
-    const logoUrl = await uploadFile("contact-assets", formData.get("logo") as File | null, "team-logos");
+    const logoUrl = await uploadFile(SITE_ASSETS_BUCKET, formData.get("logo") as File | null, "team-logos");
     const { error } = await supabase.from("teams").insert({
       name,
       slug: await getUniqueTeamSlug(supabase, name),
@@ -134,7 +200,7 @@ export async function runAdminOperation(operation: string, formData: FormData) {
       description: textValue(formData, "description"),
       sort_order: numberValue(formData, "sort_order", 100)
     };
-    const logoUrl = await uploadFile("contact-assets", formData.get("logo") as File | null, "team-logos");
+    const logoUrl = await uploadFile(SITE_ASSETS_BUCKET, formData.get("logo") as File | null, "team-logos");
     if (logoUrl) patch.logo_url = logoUrl;
     const { error } = await supabase
       .from("teams")
@@ -225,7 +291,7 @@ export async function runAdminOperation(operation: string, formData: FormData) {
         width: numberValue(formData, "width", 794),
         height: numberValue(formData, "height", 1123),
         status: textValue(formData, "status", "draft"),
-        image_url: await uploadFile("template-assets", file, "templates"),
+        image_url: await uploadFile(TEMPLATE_ASSETS_BUCKET, file, "templates"),
         thumbnail_url: null,
         description: textValue(formData, "description"),
         notes: textValue(formData, "notes")
@@ -247,7 +313,7 @@ export async function runAdminOperation(operation: string, formData: FormData) {
       description: textValue(formData, "description"),
       notes: textValue(formData, "notes")
     };
-    const imageUrl = await uploadFile("template-assets", formData.get("image") as File | null, "templates");
+    const imageUrl = await uploadFile(TEMPLATE_ASSETS_BUCKET, formData.get("image") as File | null, "templates");
     if (imageUrl) patch.image_url = imageUrl;
     const { error } = await supabase.from("templates").update(patch).eq("id", textValue(formData, "template_id"));
     if (error) throw new Error(readableSupabaseError(error));
@@ -313,8 +379,8 @@ export async function runAdminOperation(operation: string, formData: FormData) {
       line_id: textValue(formData, "line_id"),
       notes: textValue(formData, "notes")
     };
-    const avatarUrl = await uploadFile("contact-assets", formData.get("avatar") as File | null, "avatars");
-    const qrcodeUrl = await uploadFile("contact-assets", formData.get("qrcode") as File | null, "qrcodes");
+    const avatarUrl = await uploadFile(CONTACT_ASSETS_BUCKET, formData.get("avatar") as File | null, "avatars");
+    const qrcodeUrl = await uploadFile(CONTACT_ASSETS_BUCKET, formData.get("qrcode") as File | null, "qrcodes");
     if (avatarUrl) patch.avatar_url = avatarUrl;
     if (qrcodeUrl) patch.qrcode_url = qrcodeUrl;
     const query = operation === "create-contact" ? supabase.from("contacts").insert(patch) : supabase.from("contacts").update(patch).eq("id", textValue(formData, "contact_id"));
@@ -327,6 +393,17 @@ export async function runAdminOperation(operation: string, formData: FormData) {
     const { error } = await supabase.from("contacts").update({ is_active: formData.get("is_active") === "true" }).eq("id", textValue(formData, "contact_id"));
     if (error) throw new Error(readableSupabaseError(error));
     return "人員狀態已同步。";
+  }
+
+  if (operation === "update-site-settings") {
+    const bannerUrl = await uploadFile(SITE_ASSETS_BUCKET, formData.get("banner") as File | null, "banners");
+    const patch: SiteSettings = {
+      id: "main",
+      banner_image_url: bannerUrl || textValue(formData, "current_banner_url") || null
+    };
+    const { error } = await supabase.from("site_settings").upsert(patch, { onConflict: "id" });
+    if (error) throw new Error(readableSupabaseError(error));
+    return "首頁 Banner 已同步更新。";
   }
 
   if (operation === "import-contacts") {

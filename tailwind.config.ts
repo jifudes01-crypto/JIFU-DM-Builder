@@ -6,7 +6,7 @@ const config: Config = {
     extend: {
       colors: {
         navy: {
-          50: "#F4F6FA",
+          50: "#F5F6F8",
           100: "#E7ECF4",
           700: "#12345F",
           800: "#0B2345",

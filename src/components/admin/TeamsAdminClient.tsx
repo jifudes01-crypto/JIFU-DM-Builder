@@ -81,7 +81,7 @@ export function TeamsAdminClient({ initialTeams }: { initialTeams: Team[] }) {
                       // eslint-disable-next-line @next/next/no-img-element
                       <img src={team.logo_url} alt="" className="h-14 w-14 rounded-lg border border-line object-cover" />
                     ) : (
-                      <span className="grid h-14 w-14 place-items-center rounded-lg bg-navy-900 text-base font-black text-white">JF</span>
+                      <span className="grid h-14 w-14 place-items-center rounded-lg border border-dashed border-gold-300 bg-gold-50 text-xs font-black text-gold-700">無 Logo</span>
                     )}
                     {team.name}
                   </span>

@@ -20,6 +20,13 @@ export type PrintStatus = "pending" | "processing" | "sent" | "completed" | "can
 export type PrintOptionType = "quantity" | "material_size" | "vendor" | "rush" | "cutting" | "paper" | "size";
 export type ExportFormat = "png" | "jpg" | "pdf";
 
+export interface SiteSettings {
+  id: string;
+  banner_image_url: string | null;
+  created_at?: string;
+  updated_at?: string;
+}
+
 export interface Team {
   id: string;
   name: string;
@@ -124,6 +131,9 @@ export interface ExportRecord {
   preview_url: string | null;
   payload: Record<string, unknown>;
   created_at?: string;
+  teams?: Pick<Team, "name"> | null;
+  templates?: Pick<Template, "name"> | null;
+  contacts?: Pick<Contact, "name" | "mobile"> | null;
 }
 
 export interface PrintRequest {

@@ -3,22 +3,31 @@
 import Link from "next/link";
 import { useEffect, useState } from "react";
 import { loadPublicWorkspaceData } from "@/lib/supabase-public-data";
-import type { Contact, Department, Team, Template } from "@/types/database";
+import type { Contact, Department, ExportRecord, SiteSettings, Team, Template } from "@/types/database";
 
 interface UnifiedWorkspaceClientProps {
   teams?: Team[];
   departments?: Department[];
   templates?: Array<Template & { block_count?: number }>;
   contacts?: Contact[];
+  settings?: SiteSettings | null;
+  stats?: {
+    totalTemplates: number;
+    downloadRecords: number;
+  };
+  downloads?: ExportRecord[];
 }
 
 export function UnifiedWorkspaceClient({
   teams = [],
   departments = [],
   templates = [],
-  contacts = []
+  contacts = [],
+  settings = null,
+  stats = { totalTemplates: 0, downloadRecords: 0 },
+  downloads = []
 }: UnifiedWorkspaceClientProps) {
-  const [data, setData] = useState({ teams, departments, templates, contacts });
+  const [data, setData] = useState({ teams, departments, templates, contacts, settings, stats, downloads });
   const [message, setMessage] = useState("");
   const [loading, setLoading] = useState(true);
 
@@ -45,29 +54,37 @@ export function UnifiedWorkspaceClient({
 
   return (
     <main className="page-shell">
-      <div className="mb-6 flex justify-end">
-        <Link href="/admin" className="btn btn-secondary">
-          管理後台
-        </Link>
-      </div>
-
       <section className="luxury-panel mb-6">
-        <p className="text-sm font-black uppercase tracking-normal text-gold-300">Ji Fu DM Builder</p>
-        <h1 className="mt-2 text-3xl font-black text-white sm:text-4xl">吉富 DM 套版系統</h1>
-        <p className="mt-3 max-w-2xl text-base leading-7 text-slate-200">
-          為不動產、商辦、豪宅與工商地產團隊打造的專業 DM 製作入口。請選擇團隊後進入專屬模板。
-        </p>
-        <div className="mt-6 grid gap-3 sm:grid-cols-3">
-          {[
-            { label: "啟用團隊", value: data.teams.length },
-            { label: "上架模板", value: data.templates.length },
-            { label: "通訊錄", value: data.contacts.length }
-          ].map((item) => (
-            <div key={item.label} className="rounded-xl border border-white/10 bg-white/8 p-4">
-              <p className="text-sm font-bold text-slate-300">{item.label}</p>
-              <p className="mt-2 text-3xl font-black text-gold-300">{item.value}</p>
+        <div className="grid gap-6 lg:grid-cols-[1.05fr_0.95fr] lg:items-center">
+          <div>
+            <p className="text-sm font-black uppercase tracking-normal text-gold-300">Shared Template System</p>
+            <h1 className="mt-2 text-3xl font-black text-white sm:text-5xl">共用模板系統</h1>
+            <p className="mt-4 max-w-2xl text-lg leading-8 text-slate-200">
+              統一吉富工商地產團隊視覺，快速製作DM、名片與各式行銷模板，提升物件曝光與作業效率。
+            </p>
+            <div className="mt-6 flex flex-wrap gap-3">
+              <Link href="/admin" className="btn btn-secondary">
+                管理後台
+              </Link>
+              <button type="button" className="btn border-white/15 bg-white/10 text-white hover:border-gold-300 hover:bg-white/15" onClick={() => void refreshWorkspaceData()}>
+                重新整理
+              </button>
             </div>
-          ))}
+          </div>
+
+          <div className="overflow-hidden rounded-2xl border border-white/10 bg-white/8 p-3">
+            {data.settings?.banner_image_url ? (
+              // eslint-disable-next-line @next/next/no-img-element
+              <img src={data.settings.banner_image_url} alt="首頁 Banner" className="aspect-[16/10] w-full rounded-xl object-cover" />
+            ) : (
+              <div className="grid aspect-[16/10] place-items-center rounded-xl border border-dashed border-gold-300/45 bg-navy-800/80 p-6 text-center">
+                <div>
+                  <p className="text-lg font-black text-gold-300">尚未設定 Banner</p>
+                  <p className="mt-2 text-sm leading-6 text-slate-300">請從後台上傳首頁 Banner。</p>
+                </div>
+              </div>
+            )}
+          </div>
         </div>
       </section>
 
@@ -83,15 +100,15 @@ export function UnifiedWorkspaceClient({
         </div>
       ) : null}
 
-      <section>
+      <section className="mb-6">
+        <div className="mb-4">
+          <p className="eyebrow">Team Selection</p>
+          <h2 className="section-title">選擇團隊</h2>
+        </div>
         {data.teams.length ? (
           <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
             {data.teams.map((team) => (
               <Link key={team.id} href={`/templates?team=${team.id}`} className="step-card">
-                <span className="status-pill border-gold-300 bg-gold-50 text-gold-700">
-                  啟用中
-                </span>
-
                 <div className="mt-4 flex items-center gap-4">
                   {team.logo_url ? (
                     // eslint-disable-next-line @next/next/no-img-element
@@ -101,8 +118,8 @@ export function UnifiedWorkspaceClient({
                       className="h-14 w-14 shrink-0 rounded-lg border border-line object-contain"
                     />
                   ) : (
-                    <span className="grid h-14 w-14 shrink-0 place-items-center rounded-lg bg-gradient-to-br from-gold-300 to-gold-700 text-base font-black text-navy-900">
-                      JF
+                    <span className="grid h-14 w-14 shrink-0 place-items-center rounded-lg border border-dashed border-gold-300 bg-gold-50 text-xs font-black text-gold-700">
+                      無 Logo
                     </span>
                   )}
 
@@ -110,7 +127,7 @@ export function UnifiedWorkspaceClient({
                 </div>
 
                 <p className="mt-3 text-base leading-7 text-slate-600">
-                  {team.description || "請由後台補上這個團隊的簡易敘述。"}
+                  {team.description || "此團隊尚未設定簡易敘述。"}
                 </p>
 
                 <span className="btn btn-primary mt-5 w-full">進入團隊</span>
@@ -125,6 +142,58 @@ export function UnifiedWorkspaceClient({
             </p>
           </div>
         )}
+      </section>
+
+      <section className="card p-6">
+        <div className="mb-5 flex flex-wrap items-start justify-between gap-4">
+          <div>
+            <p className="eyebrow">System Information</p>
+            <h2 className="section-title">系統資訊</h2>
+          </div>
+          <div className="flex flex-wrap gap-3">
+            <div className="rounded-xl border border-line bg-navy-50 px-5 py-4">
+              <p className="text-sm font-black text-slate-500">總模板數</p>
+              <p className="mt-1 text-3xl font-black text-navy-900">{data.stats.totalTemplates}</p>
+            </div>
+            <div className="rounded-xl border border-line bg-gold-50 px-5 py-4">
+              <p className="text-sm font-black text-slate-500">下載紀錄</p>
+              <p className="mt-1 text-3xl font-black text-navy-900">{data.stats.downloadRecords}</p>
+            </div>
+          </div>
+        </div>
+
+        <div className="overflow-x-auto">
+          <table className="table-clean">
+            <thead>
+              <tr>
+                <th>下載時間</th>
+                <th>團隊</th>
+                <th>模板</th>
+                <th>格式</th>
+              </tr>
+            </thead>
+            <tbody>
+              {data.downloads.map((record) => (
+                <tr key={record.id}>
+                  <td>{record.created_at ? new Intl.DateTimeFormat("zh-TW", { dateStyle: "short", timeStyle: "short" }).format(new Date(record.created_at)) : "-"}</td>
+                  <td>{record.teams?.name ?? "-"}</td>
+                  <td>{record.templates?.name ?? "-"}</td>
+                  <td className="font-black uppercase text-navy-900">{record.format}</td>
+                </tr>
+              ))}
+              {!data.downloads.length ? (
+                <tr>
+                  <td colSpan={4}>
+                    <div className="py-6 text-center">
+                      <p className="text-lg font-black text-navy-900">目前沒有下載紀錄</p>
+                      <p className="mt-2 text-sm text-slate-500">下載完成後會顯示 Supabase 中的真實紀錄。</p>
+                    </div>
+                  </td>
+                </tr>
+              ) : null}
+            </tbody>
+          </table>
+        </div>
       </section>
     </main>
   );

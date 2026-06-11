@@ -132,6 +132,13 @@ create table if not exists contacts (
   updated_at timestamptz not null default now()
 );
 
+create table if not exists site_settings (
+  id text primary key default 'main',
+  banner_image_url text,
+  created_at timestamptz not null default now(),
+  updated_at timestamptz not null default now()
+);
+
 create table if not exists print_options (
   id uuid primary key default gen_random_uuid(),
   type print_option_type not null,
@@ -188,6 +195,7 @@ create index if not exists idx_template_blocks_template on template_blocks(templ
 create index if not exists idx_departments_team_active on departments(team_id, is_active, sort_order);
 create index if not exists idx_contacts_team_active on contacts(team_id, is_active);
 create index if not exists idx_contacts_department_active on contacts(department_id, is_active);
+create index if not exists idx_exports_created_at on exports(created_at desc);
 create index if not exists idx_print_requests_status on print_requests(status, created_at desc);
 
 alter table teams add column if not exists description text;
@@ -202,6 +210,7 @@ alter table print_requests add column if not exists total_quantity integer not n
 alter table print_requests add column if not exists material_summary text;
 alter table print_requests add column if not exists vendor text;
 alter table print_requests add column if not exists batch_items jsonb not null default '[]'::jsonb;
+alter table site_settings add column if not exists banner_image_url text;
 
 drop trigger if exists teams_set_updated_at on teams;
 create trigger teams_set_updated_at before update on teams for each row execute function set_updated_at();
@@ -218,6 +227,9 @@ create trigger template_blocks_set_updated_at before update on template_blocks f
 drop trigger if exists contacts_set_updated_at on contacts;
 create trigger contacts_set_updated_at before update on contacts for each row execute function set_updated_at();
 
+drop trigger if exists site_settings_set_updated_at on site_settings;
+create trigger site_settings_set_updated_at before update on site_settings for each row execute function set_updated_at();
+
 drop trigger if exists print_options_set_updated_at on print_options;
 create trigger print_options_set_updated_at before update on print_options for each row execute function set_updated_at();
 
@@ -226,27 +238,18 @@ create trigger print_requests_set_updated_at before update on print_requests for
 
 insert into storage.buckets (id, name, public)
 values
+  ('site-assets', 'site-assets', true),
   ('template-assets', 'template-assets', true),
   ('contact-assets', 'contact-assets', true),
   ('dm-exports', 'dm-exports', true)
 on conflict (id) do update set public = excluded.public;
-
-insert into print_options (type, label, value, vendor, sort_order)
-values
-  ('quantity', '一般印量', '100', null, 1),
-  ('quantity', '一般印量', '300', null, 2),
-  ('quantity', '一般印量', '500', null, 3),
-  ('material_size', '銅版紙 A4', '銅版紙 A4', null, 1),
-  ('material_size', '霧面紙 A4', '霧面紙 A4', null, 2),
-  ('vendor', '預設廠商', '預設廠商', '預設廠商', 1),
-  ('rush', '急件', 'yes', null, 1),
-  ('cutting', '需要裁切', 'yes', null, 1);
 
 alter table teams enable row level security;
 alter table departments enable row level security;
 alter table templates enable row level security;
 alter table template_blocks enable row level security;
 alter table contacts enable row level security;
+alter table site_settings enable row level security;
 alter table print_options enable row level security;
 alter table exports enable row level security;
 alter table print_requests enable row level security;
@@ -281,6 +284,11 @@ drop policy if exists "admins write contacts" on contacts;
 drop policy if exists "public manage contacts" on contacts;
 create policy "public manage contacts" on contacts for all to anon, authenticated using (true) with check (true);
 
+drop policy if exists "public read site settings" on site_settings;
+create policy "public read site settings" on site_settings for select to anon, authenticated using (true);
+drop policy if exists "public manage site settings" on site_settings;
+create policy "public manage site settings" on site_settings for all to anon, authenticated using (true) with check (true);
+
 drop policy if exists "public read active print options" on print_options;
 create policy "public read active print options" on print_options for select to anon, authenticated using (true);
 drop policy if exists "admins write print options" on print_options;
@@ -303,9 +311,9 @@ drop policy if exists "public update print requests" on print_requests;
 create policy "public update print requests" on print_requests for update to anon, authenticated using (true) with check (true);
 
 drop policy if exists "public read template assets" on storage.objects;
-create policy "public read template assets" on storage.objects for select to anon, authenticated using (bucket_id in ('template-assets', 'contact-assets', 'dm-exports'));
+create policy "public read template assets" on storage.objects for select to anon, authenticated using (bucket_id in ('site-assets', 'template-assets', 'contact-assets', 'dm-exports'));
 drop policy if exists "admins upload template assets" on storage.objects;
 drop policy if exists "public upload template assets" on storage.objects;
-create policy "public upload template assets" on storage.objects for insert to anon, authenticated with check (bucket_id in ('template-assets', 'contact-assets'));
+create policy "public upload template assets" on storage.objects for insert to anon, authenticated with check (bucket_id in ('site-assets', 'template-assets', 'contact-assets'));
 drop policy if exists "public upload dm exports" on storage.objects;
 create policy "public upload dm exports" on storage.objects for insert to anon, authenticated with check (bucket_id = 'dm-exports');
