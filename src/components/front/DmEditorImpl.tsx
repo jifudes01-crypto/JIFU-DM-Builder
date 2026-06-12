@@ -86,6 +86,17 @@ function readFileAsDataUrl(file?: File | null) {
   });
 }
 
+function getTemplateExampleImageUrl(template: DmEditorProps["template"]) {
+  const source = template as DmEditorProps["template"] & {
+    example_image_url?: string | null;
+    sample_image_url?: string | null;
+    reference_image_url?: string | null;
+    demo_image_url?: string | null;
+  };
+
+  return source.example_image_url || source.sample_image_url || source.reference_image_url || source.demo_image_url || null;
+}
+
 function EditableImage({
   element,
   selected,
@@ -256,11 +267,12 @@ export function DmEditor({ teamId: _teamId, team, template, departments, contact
   const filteredContacts = contacts.filter((contact) => !departmentId || contact.department_id === departmentId);
   const selectedContact = filteredContacts.find((contact) => contact.id === contactId) ?? filteredContacts[0] ?? null;
   const selectedElement = elements.find((element) => element.id === selectedId) ?? null;
+  const exampleImageUrl = getTemplateExampleImageUrl(template);
 
   const scale = useMemo(() => {
-    if (typeof window === "undefined") return 0.45;
-    const maxWidth = Math.min(980, Math.max(320, window.innerWidth - 520));
-    return Math.min(1, maxWidth / template.width);
+    if (typeof window === "undefined") return 0.42;
+    const maxWidth = Math.min(740, Math.max(320, window.innerWidth - 760));
+    return Math.min(0.72, maxWidth / template.width);
   }, [template.width]);
 
   useEffect(() => {
@@ -426,7 +438,7 @@ export function DmEditor({ teamId: _teamId, team, template, departments, contact
   }
 
   return (
-    <div className="grid gap-6 xl:grid-cols-[360px_1fr]">
+    <div className="grid gap-6 2xl:grid-cols-[300px_minmax(420px,1fr)_340px] xl:grid-cols-[280px_minmax(420px,1fr)_320px]">
       <section className="space-y-5">
         <div className="luxury-panel">
           <p className="text-sm font-black uppercase tracking-normal text-gold-300">PPT Editor</p>
@@ -480,57 +492,6 @@ export function DmEditor({ teamId: _teamId, team, template, departments, contact
               插入 QR Code
             </button>
           </div>
-        </div>
-
-        <div className="card p-5">
-          <p className="field-label">文字樣式</p>
-          {selectedElement?.type === "text" ? (
-            <div className="space-y-3">
-              <textarea value={selectedElement.text} onChange={(event) => updateSelectedText({ text: event.target.value })} />
-              <div className="grid grid-cols-2 gap-3">
-                <label>
-                  <span className="field-label">字級</span>
-                  <input type="number" min={8} max={180} value={selectedElement.fontSize} onChange={(event) => updateSelectedText({ fontSize: Number(event.target.value) })} />
-                </label>
-                <label>
-                  <span className="field-label">顏色</span>
-                  <input type="color" value={selectedElement.fill} onChange={(event) => updateSelectedText({ fill: event.target.value })} />
-                </label>
-              </div>
-              <label>
-                <span className="field-label">字體</span>
-                <select value={selectedElement.fontFamily} onChange={(event) => updateSelectedText({ fontFamily: event.target.value })}>
-                  <option value="Noto Sans TC">Noto Sans TC</option>
-                  <option value="Microsoft JhengHei">Microsoft JhengHei</option>
-                  <option value="sans-serif">sans-serif</option>
-                  <option value="serif">serif</option>
-                </select>
-              </label>
-              <div className="grid grid-cols-3 gap-2">
-                <button type="button" className="btn btn-secondary" onClick={() => updateSelectedText({ align: "left" })}>靠左</button>
-                <button type="button" className="btn btn-secondary" onClick={() => updateSelectedText({ align: "center" })}>置中</button>
-                <button type="button" className="btn btn-secondary" onClick={() => updateSelectedText({ align: "right" })}>靠右</button>
-              </div>
-              <div className="grid grid-cols-2 gap-2">
-                <button
-                  type="button"
-                  className="btn btn-secondary"
-                  onClick={() => updateSelectedText({ fontStyle: selectedElement.fontStyle.includes("bold") ? selectedElement.fontStyle.replace("bold", "").trim() || "normal" : `${selectedElement.fontStyle === "normal" ? "" : selectedElement.fontStyle} bold`.trim() })}
-                >
-                  粗體
-                </button>
-                <button
-                  type="button"
-                  className="btn btn-secondary"
-                  onClick={() => updateSelectedText({ fontStyle: selectedElement.fontStyle.includes("italic") ? selectedElement.fontStyle.replace("italic", "").trim() || "normal" : `${selectedElement.fontStyle === "normal" ? "" : selectedElement.fontStyle} italic`.trim() })}
-                >
-                  斜體
-                </button>
-              </div>
-            </div>
-          ) : (
-            <p className="field-help">請先點選畫布上的文字，這裡才會顯示可調整的字型、大小與顏色。</p>
-          )}
         </div>
 
         <div className="card p-5">
@@ -620,6 +581,76 @@ export function DmEditor({ teamId: _teamId, team, template, departments, contact
           </div>
         ) : null}
       </section>
+
+      <aside className="space-y-5">
+        <div className="card p-5">
+          <p className="eyebrow">Style Panel</p>
+          <h2 className="section-title text-2xl">文字編輯</h2>
+          {selectedElement?.type === "text" ? (
+            <div className="mt-4 space-y-3">
+              <textarea value={selectedElement.text} onChange={(event) => updateSelectedText({ text: event.target.value })} />
+              <div className="grid grid-cols-2 gap-3">
+                <label>
+                  <span className="field-label">字級</span>
+                  <input type="number" min={8} max={180} value={selectedElement.fontSize} onChange={(event) => updateSelectedText({ fontSize: Number(event.target.value) })} />
+                </label>
+                <label>
+                  <span className="field-label">顏色</span>
+                  <input type="color" value={selectedElement.fill} onChange={(event) => updateSelectedText({ fill: event.target.value })} />
+                </label>
+              </div>
+              <label>
+                <span className="field-label">字體</span>
+                <select value={selectedElement.fontFamily} onChange={(event) => updateSelectedText({ fontFamily: event.target.value })}>
+                  <option value="Noto Sans TC">Noto Sans TC</option>
+                  <option value="Microsoft JhengHei">Microsoft JhengHei</option>
+                  <option value="sans-serif">sans-serif</option>
+                  <option value="serif">serif</option>
+                </select>
+              </label>
+              <div className="grid grid-cols-3 gap-2">
+                <button type="button" className="btn btn-secondary" onClick={() => updateSelectedText({ align: "left" })}>靠左</button>
+                <button type="button" className="btn btn-secondary" onClick={() => updateSelectedText({ align: "center" })}>置中</button>
+                <button type="button" className="btn btn-secondary" onClick={() => updateSelectedText({ align: "right" })}>靠右</button>
+              </div>
+              <div className="grid grid-cols-2 gap-2">
+                <button
+                  type="button"
+                  className="btn btn-secondary"
+                  onClick={() => updateSelectedText({ fontStyle: selectedElement.fontStyle.includes("bold") ? selectedElement.fontStyle.replace("bold", "").trim() || "normal" : `${selectedElement.fontStyle === "normal" ? "" : selectedElement.fontStyle} bold`.trim() })}
+                >
+                  粗體
+                </button>
+                <button
+                  type="button"
+                  className="btn btn-secondary"
+                  onClick={() => updateSelectedText({ fontStyle: selectedElement.fontStyle.includes("italic") ? selectedElement.fontStyle.replace("italic", "").trim() || "normal" : `${selectedElement.fontStyle === "normal" ? "" : selectedElement.fontStyle} italic`.trim() })}
+                >
+                  斜體
+                </button>
+              </div>
+            </div>
+          ) : selectedElement?.type === "image" ? (
+            <p className="mt-4 text-sm text-slate-500">目前選取的是圖片，可直接在畫布中拖曳、拉角縮放與旋轉。</p>
+          ) : (
+            <p className="mt-4 text-sm text-slate-500">請先點選畫布上的文字，這裡才會顯示可調整的字型、大小與顏色。</p>
+          )}
+        </div>
+
+        <div className="card p-5">
+          <p className="eyebrow">Reference</p>
+          <h2 className="section-title text-2xl">展示圖參考</h2>
+          {exampleImageUrl ? (
+            // eslint-disable-next-line @next/next/no-img-element
+            <img src={exampleImageUrl} alt="模板展示圖參考" className="mt-4 w-full rounded-xl border border-line bg-white object-contain" />
+          ) : (
+            <div className="mt-4 rounded-xl border border-dashed border-gold-300 bg-gold-50 p-5 text-sm font-bold leading-6 text-navy-900">
+              目前尚未設定展示圖。之後後台新增模板時，可另外上傳「展示圖 / 參考圖」，前台會在這裡同步顯示。
+            </div>
+          )}
+          <p className="mt-3 text-sm text-slate-500">展示圖只作為業務編輯參考，不會輸出到下載成品。</p>
+        </div>
+      </aside>
     </div>
   );
 }
