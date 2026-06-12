@@ -52,40 +52,50 @@ export function UnifiedWorkspaceClient({
     refreshWorkspaceData();
   }, []);
 
+  const bannerUrl = data.settings?.banner_image_url ?? "";
+
   return (
     <main className="page-shell">
-      <section className="luxury-panel mb-6">
-        <div className="grid gap-6 lg:grid-cols-[1.05fr_0.95fr] lg:items-center">
-          <div>
-            <p className="text-sm font-black uppercase tracking-normal text-gold-300">Shared Template System</p>
-            <h1 className="mt-2 text-3xl font-black text-white sm:text-5xl">共用模板系統</h1>
-            <p className="mt-4 max-w-2xl text-lg leading-8 text-slate-200">
-              統一吉富工商地產團隊視覺，快速製作DM、名片與各式行銷模板，提升物件曝光與作業效率。
-            </p>
-            <div className="mt-6 flex flex-wrap gap-3">
-              <Link href="/admin" className="btn btn-secondary">
-                管理後台
-              </Link>
-              <button type="button" className="btn border-white/15 bg-white/10 text-white hover:border-gold-300 hover:bg-white/15" onClick={() => void refreshWorkspaceData()}>
-                重新整理
-              </button>
-            </div>
-          </div>
-
-          <div className="overflow-hidden rounded-2xl border border-white/10 bg-white/8 p-3">
-            {data.settings?.banner_image_url ? (
-              // eslint-disable-next-line @next/next/no-img-element
-              <img src={data.settings.banner_image_url} alt="首頁 Banner" className="aspect-[16/10] w-full rounded-xl object-cover" />
-            ) : (
-              <div className="grid aspect-[16/10] place-items-center rounded-xl border border-dashed border-gold-300/45 bg-navy-800/80 p-6 text-center">
-                <div>
-                  <p className="text-lg font-black text-gold-300">尚未設定 Banner</p>
-                  <p className="mt-2 text-sm leading-6 text-slate-300">請從後台上傳首頁 Banner。</p>
-                </div>
-              </div>
-            )}
+      <section
+        className="relative mb-6 overflow-hidden rounded-[28px] border border-white/10 bg-navy-950 px-6 py-12 shadow-2xl sm:px-10 lg:min-h-[360px] lg:px-12 lg:py-16"
+        style={
+          bannerUrl
+            ? {
+                backgroundImage: `linear-gradient(90deg, rgba(7, 26, 51, 0.96) 0%, rgba(7, 26, 51, 0.9) 34%, rgba(7, 26, 51, 0.54) 58%, rgba(7, 26, 51, 0.16) 100%), url(${bannerUrl})`,
+                backgroundSize: "cover",
+                backgroundPosition: "center right",
+                backgroundRepeat: "no-repeat"
+              }
+            : undefined
+        }
+      >
+        <div className="pointer-events-none absolute inset-0 bg-[radial-gradient(circle_at_18%_18%,rgba(216,185,122,0.18),transparent_34%),linear-gradient(180deg,rgba(255,255,255,0.08),transparent_46%)]" />
+        <div className="relative max-w-2xl">
+          <p className="text-sm font-black uppercase tracking-normal text-gold-300">Shared Template System</p>
+          <h1 className="mt-2 text-3xl font-black text-white drop-shadow-sm sm:text-5xl">共用模板系統</h1>
+          <p className="mt-4 max-w-2xl text-lg leading-8 text-slate-100 drop-shadow">
+            統一吉富工商地產團隊視覺，快速製作DM、名片與各式行銷模板，提升物件曝光與作業效率。
+          </p>
+          <div className="mt-6 flex flex-wrap gap-3">
+            <Link href="/admin" className="btn btn-secondary">
+              管理後台
+            </Link>
+            <button
+              type="button"
+              className="btn border-white/15 bg-white/10 text-white hover:border-gold-300 hover:bg-white/15"
+              onClick={() => void refreshWorkspaceData()}
+            >
+              重新整理
+            </button>
           </div>
         </div>
+
+        {!bannerUrl ? (
+          <div className="relative mt-8 rounded-2xl border border-dashed border-gold-300/45 bg-navy-800/80 p-6 text-center text-slate-300 lg:absolute lg:right-10 lg:top-10 lg:mt-0 lg:w-[38%]">
+            <p className="text-lg font-black text-gold-300">尚未設定 Banner</p>
+            <p className="mt-2 text-sm leading-6">請從後台上傳首頁 Banner。</p>
+          </div>
+        ) : null}
       </section>
 
       {loading ? (
