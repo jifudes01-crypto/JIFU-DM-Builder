@@ -57,23 +57,35 @@ export function UnifiedWorkspaceClient({
   return (
     <main className="page-shell">
       <section
-        className="relative mb-6 overflow-hidden rounded-[28px] border border-white/10 bg-navy-950 px-6 py-12 shadow-2xl sm:px-10 lg:min-h-[360px] lg:px-12 lg:py-16"
+        className="relative mb-6 overflow-hidden rounded-[28px] border border-white/10 bg-navy-950 px-6 py-12 shadow-2xl sm:px-10 lg:aspect-[12/5] lg:min-h-[360px] lg:px-12 lg:py-16"
         style={
           bannerUrl
             ? {
-                backgroundImage: `linear-gradient(90deg, rgba(7, 26, 51, 0.96) 0%, rgba(7, 26, 51, 0.9) 34%, rgba(7, 26, 51, 0.54) 58%, rgba(7, 26, 51, 0.16) 100%), url(${bannerUrl})`,
+                backgroundImage: `url(${bannerUrl})`,
                 backgroundSize: "cover",
-                backgroundPosition: "center right",
+                backgroundPosition: "center center",
                 backgroundRepeat: "no-repeat"
               }
             : undefined
         }
       >
-        <div className="pointer-events-none absolute inset-0 bg-[radial-gradient(circle_at_18%_18%,rgba(216,185,122,0.18),transparent_34%),linear-gradient(180deg,rgba(255,255,255,0.08),transparent_46%)]" />
         <div className="relative max-w-2xl">
-          <p className="text-sm font-black uppercase tracking-normal text-gold-300">Shared Template System</p>
-          <h1 className="mt-2 text-3xl font-black text-white drop-shadow-sm sm:text-5xl">共用模板系統</h1>
-          <p className="mt-4 max-w-2xl text-lg leading-8 text-slate-100 drop-shadow">
+          <p
+            className="text-sm font-black uppercase tracking-normal text-gold-300"
+            style={{ textShadow: "0 2px 12px rgba(0,0,0,.45)" }}
+          >
+            Shared Template System
+          </p>
+          <h1
+            className="mt-2 text-3xl font-black text-white sm:text-5xl"
+            style={{ textShadow: "0 3px 18px rgba(0,0,0,.55)" }}
+          >
+            共用模板系統
+          </h1>
+          <p
+            className="mt-4 max-w-2xl text-lg leading-8 text-white"
+            style={{ textShadow: "0 2px 14px rgba(0,0,0,.55)" }}
+          >
             統一吉富工商地產團隊視覺，快速製作DM、名片與各式行銷模板，提升物件曝光與作業效率。
           </p>
           <div className="mt-6 flex flex-wrap gap-3">
@@ -82,7 +94,7 @@ export function UnifiedWorkspaceClient({
             </Link>
             <button
               type="button"
-              className="btn border-white/15 bg-white/10 text-white hover:border-gold-300 hover:bg-white/15"
+              className="btn border-white/25 bg-white/15 text-white shadow-lg hover:border-gold-300 hover:bg-white/20"
               onClick={() => void refreshWorkspaceData()}
             >
               重新整理
