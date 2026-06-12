@@ -74,6 +74,42 @@ function ImageBlock({
     let x = block.x;
     let y = block.y;
 
+    if (block.image_fit === "cover") {
+      let cropX = 0;
+      let cropY = 0;
+      let cropWidth = image.width;
+      let cropHeight = image.height;
+
+      if (imageRatio > boxRatio) {
+        cropWidth = image.height * boxRatio;
+        cropX = (image.width - cropWidth) / 2;
+      } else {
+        cropHeight = image.width / boxRatio;
+        cropY = (image.height - cropHeight) / 2;
+      }
+
+      return (
+        <>
+          <Rect
+            x={block.x}
+            y={block.y}
+            width={block.width}
+            height={block.height}
+            fill="#f1f5f9"
+            stroke="#d8e0e8"
+          />
+          <KonvaImage
+            image={image}
+            x={block.x}
+            y={block.y}
+            width={block.width}
+            height={block.height}
+            crop={{ x: cropX, y: cropY, width: cropWidth, height: cropHeight }}
+          />
+        </>
+      );
+    }
+
     if (block.image_fit === "contain") {
       if (imageRatio > boxRatio) {
         height = block.width / imageRatio;
@@ -127,7 +163,16 @@ function QrBlock({ block, src }: { block: TemplateBlock; src?: string | null }) 
   const image = useLoadedImage(src);
 
   if (image) {
-    return <KonvaImage image={image} x={block.x} y={block.y} width={block.width} height={block.height} />;
+    const size = Math.min(block.width, block.height);
+    return (
+      <KonvaImage
+        image={image}
+        x={block.x + (block.width - size) / 2}
+        y={block.y + (block.height - size) / 2}
+        width={size}
+        height={size}
+      />
+    );
   }
 
   return (
@@ -168,12 +213,11 @@ export function TemplateCanvasPreview({
   }
 
   useEffect(() => {
-    const qrText = contact?.qrcode_url || contact?.line_id || contact?.mobile || contact?.email || "吉富房屋";
-    if (contact?.qrcode_url) {
-      setQrDataUrl(contact.qrcode_url);
+    const qrText = contact?.line_id || contact?.mobile || contact?.email || "";
+    if (!qrText) {
+      setQrDataUrl(null);
       return;
     }
-
     QRCode.toDataURL(qrText, { margin: 1, width: 320 })
       .then(setQrDataUrl)
       .catch(() => setQrDataUrl(null));
@@ -209,12 +253,12 @@ export function TemplateCanvasPreview({
                   : values[block.id] || values[block.label] || fallbackText(block);
 
               if (["image", "avatar", "logo"].includes(block.type)) {
-                const src = block.type === "avatar" ? contact?.avatar_url || images[block.id] : images[block.id];
+                const src = block.type === "avatar" ? images[block.id] || contact?.avatar_url : images[block.id];
                 return <ImageBlock key={block.id} block={block} src={src} label={block.label} />;
               }
 
               if (block.type === "qrcode") {
-                return <QrBlock key={block.id} block={block} src={qrDataUrl || images[block.id]} />;
+                return <QrBlock key={block.id} block={block} src={images[block.id] || contact?.qrcode_url || qrDataUrl} />;
               }
 
               return (

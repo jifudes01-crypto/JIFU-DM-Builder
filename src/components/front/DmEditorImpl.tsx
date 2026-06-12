@@ -6,6 +6,7 @@ import { useEffect, useMemo, useRef, useState } from "react";
 import { useForm, type Resolver } from "react-hook-form";
 import * as XLSX from "xlsx";
 import { z } from "zod";
+import { ImageCropUpload } from "@/components/front/ImageCropUpload";
 import { ImageUploadField } from "@/components/front/ImageUploadField";
 import { TemplateCanvasPreview } from "@/components/front/TemplateCanvasPreview";
 import { createSupabaseBrowserClient } from "@/lib/supabase-browser";
@@ -18,6 +19,12 @@ import type {
 
 function isImageBlock(block: TemplateBlock) {
   return ["image", "avatar", "logo"].includes(block.type);
+}
+
+function cropAspectFromAvatarBlock(block?: TemplateBlock) {
+  if (!block) return 1;
+  const ratio = block.width / block.height;
+  return ratio > 0.85 ? 1 : 4 / 5;
 }
 
 function getStorageKey(teamId: string, templateId: string) {
@@ -119,7 +126,10 @@ export function DmEditor({ teamId, team, template, departments, contacts }: DmEd
   const [generated, setGenerated] = useState<{ png: string; jpg: string; pdf: string; saveKey: string } | null>(null);
   const schema = useMemo(() => createSchema(template.blocks), [template.blocks]);
   const textBlocks = useMemo(() => template.blocks.filter((block) => !isImageBlock(block) && block.type !== "qrcode"), [template.blocks]);
-  const imageBlocks = useMemo(() => template.blocks.filter((block) => isImageBlock(block)), [template.blocks]);
+  const avatarBlocks = useMemo(() => template.blocks.filter((block) => block.type === "avatar"), [template.blocks]);
+  const qrcodeBlocks = useMemo(() => template.blocks.filter((block) => block.type === "qrcode"), [template.blocks]);
+  const imageBlocks = useMemo(() => template.blocks.filter((block) => isImageBlock(block) && block.type !== "avatar"), [template.blocks]);
+  const avatarAspectRatio = useMemo(() => cropAspectFromAvatarBlock(avatarBlocks[0]), [avatarBlocks]);
 
   const form = useForm<EditorFormValues>({
     resolver: zodResolver(schema) as Resolver<EditorFormValues>,
@@ -246,6 +256,22 @@ export function DmEditor({ teamId, team, template, departments, contacts }: DmEd
     setBatchIndex(index);
   }
 
+  function applyImageToBlocks(blocks: TemplateBlock[], dataUrl: string) {
+    const nextImages = { ...(form.getValues("images") ?? {}) };
+    blocks.forEach((block) => {
+      nextImages[block.id] = dataUrl;
+    });
+    form.setValue("images", nextImages, { shouldValidate: true });
+  }
+
+  function clearImagesFromBlocks(blocks: TemplateBlock[]) {
+    const nextImages = { ...(form.getValues("images") ?? {}) };
+    blocks.forEach((block) => {
+      delete nextImages[block.id];
+    });
+    form.setValue("images", nextImages, { shouldValidate: true });
+  }
+
   async function createExports() {
     const valid = await form.trigger();
     if (!valid) {
@@ -356,6 +382,36 @@ export function DmEditor({ teamId, team, template, departments, contacts }: DmEd
           </select>
           <p className="field-help">選擇後會自動帶入團隊、部門、姓名、職稱、手機、電話、LINE、Email、頭像與 QR Code。</p>
         </div>
+
+        {avatarBlocks.length || qrcodeBlocks.length ? (
+          <div className="space-y-5">
+            {avatarBlocks.length ? (
+              <ImageCropUpload
+                title="業務形象照"
+                uploadLabel="上傳形象照"
+                aspectRatio={avatarAspectRatio}
+                value={avatarBlocks.map((block) => watched.images?.[block.id]).find(Boolean)}
+                fallbackUrl={selectedContact?.avatar_url}
+                fallbackLabel="目前使用後台通訊錄預設形象照"
+                onApply={(dataUrl) => applyImageToBlocks(avatarBlocks, dataUrl)}
+                onClear={() => clearImagesFromBlocks(avatarBlocks)}
+              />
+            ) : null}
+
+            {qrcodeBlocks.length ? (
+              <ImageCropUpload
+                title="QR Code 圖片"
+                uploadLabel="上傳 QR Code"
+                aspectRatio={1}
+                value={qrcodeBlocks.map((block) => watched.images?.[block.id]).find(Boolean)}
+                fallbackUrl={selectedContact?.qrcode_url}
+                fallbackLabel="目前使用後台通訊錄預設 QR Code"
+                onApply={(dataUrl) => applyImageToBlocks(qrcodeBlocks, dataUrl)}
+                onClear={() => clearImagesFromBlocks(qrcodeBlocks)}
+              />
+            ) : null}
+          </div>
+        ) : null}
 
         <div className="card p-5">
           <label className="field-label">批次匯入 Excel / CSV</label>
