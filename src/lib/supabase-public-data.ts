@@ -33,15 +33,23 @@ export async function loadPublicWorkspaceData() {
   if (errors[0]) throw errors[0];
   if (departments.error && !isMissingDepartmentSchema(departments.error)) throw departments.error;
 
+  const templateRows = (templates.data ?? []);
+
   return {
     teams: (teams.data ?? []) as Team[],
     departments: departments.error ? [] : ((departments.data ?? []) as Department[]),
-    templates: (templates.data ?? []).map((item) => {
+    templates: templateRows.map((item) => {
       const row = item as Template & { template_blocks?: unknown };
       const { template_blocks: templateBlocks, ...template } = row;
       return { ...template, block_count: blockCountFromRelation(templateBlocks) };
     }) as TemplateWithBlockCount[],
-    contacts: (contacts.data ?? []) as Contact[]
+    contacts: (contacts.data ?? []) as Contact[],
+    settings: null,
+    stats: {
+      totalTemplates: templateRows.length,
+      downloadRecords: 0
+    },
+    downloads: []
   };
 }
 
