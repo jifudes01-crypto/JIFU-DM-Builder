@@ -36,7 +36,7 @@ function readableSyncError(error: unknown) {
   const detail = error as { message?: string; code?: string; details?: string; hint?: string };
   const text = `${detail.message ?? ""} ${detail.details ?? ""} ${detail.hint ?? ""}`.toLowerCase();
   if (text.includes("bucket not found") || (text.includes("bucket") && text.includes("not found"))) {
-    return "Supabase Storage bucket 找不到，請確認 dm-exports 已建立。";
+    return "Supabase Storage bucket「dm-exports」找不到，請先到 Supabase SQL Editor 執行 supabase/schema.sql。";
   }
   return [detail.message, detail.code ? `代碼：${detail.code}` : "", detail.details, detail.hint].filter(Boolean).join(" / ") || "同步下載紀錄失敗。";
 }

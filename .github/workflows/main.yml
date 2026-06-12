@@ -35,6 +35,22 @@ jobs:
       - name: Install dependencies
         run: npm install --no-audit --no-fund --package-lock=false
 
+      - name: Check Supabase public secrets
+        run: |
+          python3 - <<'PY'
+          import os
+          import sys
+
+          missing = [
+              name for name in ("NEXT_PUBLIC_SUPABASE_URL", "NEXT_PUBLIC_SUPABASE_ANON_KEY")
+              if not os.environ.get(name, "").strip()
+          ]
+
+          if missing:
+              print("Supabase 尚未完成部署設定，請在 GitHub Secrets 設定：" + "、".join(missing))
+              sys.exit(1)
+          PY
+
       - name: Typecheck
         run: npm run typecheck
 
@@ -62,6 +78,7 @@ jobs:
       - name: Verify exported assets
         run: |
           test -f out/admin/index.html
+          test -f out/supabase-config.json
           test -d out/_next/static
           grep -q "/JIFU-DM-Builder/_next/static/" out/admin/index.html
           ! grep -q 'href="/_next/static/' out/admin/index.html

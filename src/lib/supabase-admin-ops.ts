@@ -8,6 +8,7 @@ const SITE_ASSETS_BUCKET = "site-assets";
 const TEMPLATE_ASSETS_BUCKET = "template-assets";
 const CONTACT_ASSETS_BUCKET = "contact-assets";
 const DM_EXPORTS_BUCKET = "dm-exports";
+const ALL_STORAGE_BUCKETS = [SITE_ASSETS_BUCKET, TEMPLATE_ASSETS_BUCKET, CONTACT_ASSETS_BUCKET, DM_EXPORTS_BUCKET];
 
 function textValue(formData: FormData, key: string, fallback = "") {
   return String(formData.get(key) ?? fallback).trim();
@@ -36,6 +37,10 @@ function readableSupabaseError(error: unknown) {
     return `Supabase Storage bucket 找不到。請確認已執行 supabase/schema.sql，並建立 ${SITE_ASSETS_BUCKET}、${TEMPLATE_ASSETS_BUCKET}、${CONTACT_ASSETS_BUCKET}、${DM_EXPORTS_BUCKET}。`;
   }
   return [detail.message, detail.code ? `代碼：${detail.code}` : "", detail.details, detail.hint].filter(Boolean).join(" / ") || "同步失敗，請稍後再試。";
+}
+
+function readableBucketMissingError(bucket: string) {
+  return `Supabase Storage bucket「${bucket}」找不到。請先到 Supabase SQL Editor 執行 supabase/schema.sql，確認已建立 ${ALL_STORAGE_BUCKETS.join("、")}。`;
 }
 
 function isBucketMissing(error: unknown) {
@@ -67,7 +72,7 @@ async function getUniqueTeamSlug(supabase: SupabaseClient, name: string, current
 
 async function uploadFile(bucket: string, file: File | null, prefix: string) {
   if (!file || file.size === 0) return null;
-  const ext = file.name.split(".").pop() || "png";
+  const ext = (file.name.split(".").pop() || "png").toLowerCase().replace(/[^a-z0-9]/g, "") || "png";
   const path = `${prefix}/${crypto.randomUUID()}.${ext}`;
   const supabase = await createSupabaseBrowserClient();
   let targetBucket = bucket;
@@ -79,8 +84,27 @@ async function uploadFile(bucket: string, file: File | null, prefix: string) {
     error = fallback.error;
   }
 
+  if (error && isBucketMissing(error)) throw new Error(readableBucketMissingError(targetBucket));
   if (error) throw new Error(readableSupabaseError(error));
   return supabase.storage.from(targetBucket).getPublicUrl(path).data.publicUrl;
+}
+
+async function createTemplateFromFile(supabase: SupabaseClient, formData: FormData, file: File, index: number, total: number) {
+  const imageUrl = await uploadFile(TEMPLATE_ASSETS_BUCKET, file, "templates");
+  const { error } = await supabase.from("templates").insert({
+    team_id: textValue(formData, "team_id"),
+    name: total > 1 ? `${textValue(formData, "name")} ${index + 1}` : textValue(formData, "name"),
+    category: textValue(formData, "category", "每月精選物件"),
+    size_label: textValue(formData, "size_label", "A4 直式"),
+    width: numberValue(formData, "width", 794),
+    height: numberValue(formData, "height", 1123),
+    status: textValue(formData, "status", "draft"),
+    image_url: imageUrl,
+    thumbnail_url: null,
+    description: textValue(formData, "description"),
+    notes: textValue(formData, "notes")
+  });
+  if (error) throw new Error(readableSupabaseError(error));
 }
 
 export async function listTeamsForAdmin() {
@@ -282,24 +306,22 @@ export async function runAdminOperation(operation: string, formData: FormData) {
 
   if (operation === "create-template") {
     const files = formData.getAll("images").filter((item): item is File => item instanceof File && item.size > 0);
-    const rows = await Promise.all(
-      files.map(async (file, index) => ({
-        team_id: textValue(formData, "team_id"),
-        name: files.length > 1 ? `${textValue(formData, "name")} ${index + 1}` : textValue(formData, "name"),
-        category: textValue(formData, "category", "每月精選物件"),
-        size_label: textValue(formData, "size_label", "A4 直式"),
-        width: numberValue(formData, "width", 794),
-        height: numberValue(formData, "height", 1123),
-        status: textValue(formData, "status", "draft"),
-        image_url: await uploadFile(TEMPLATE_ASSETS_BUCKET, file, "templates"),
-        thumbnail_url: null,
-        description: textValue(formData, "description"),
-        notes: textValue(formData, "notes")
-      }))
-    );
-    const { error } = await supabase.from("templates").insert(rows);
-    if (error) throw new Error(readableSupabaseError(error));
-    return "模板已同步新增。";
+    if (!files.length) throw new Error("請至少選擇一張模板底圖。");
+
+    const failed: string[] = [];
+    let successCount = 0;
+    for (const [index, file] of files.entries()) {
+      try {
+        await createTemplateFromFile(supabase, formData, file, index, files.length);
+        successCount += 1;
+      } catch (error) {
+        failed.push(`${file.name || `第 ${index + 1} 張`}: ${error instanceof Error ? error.message : "同步失敗"}`);
+      }
+    }
+
+    if (!successCount) throw new Error(failed[0] ?? "模板同步失敗，請稍後再試。");
+    if (failed.length) return `已同步新增 ${successCount} 張模板；${failed.length} 張失敗：${failed.join("；")}`;
+    return `已同步新增 ${successCount} 張模板。`;
   }
 
   if (operation === "update-template") {
