@@ -96,6 +96,19 @@ function normalizedLabel(value: string) {
   return value.trim().toLowerCase().replace(/\s+/g, "");
 }
 
+const SIZE_PRESET_LABELS = new Set(["A4直式", "A4橫式", "名片", "IG貼文", "IG限動", "自訂尺寸"]);
+
+function normalizeSizeLabel(label?: string | null) {
+  const normalized = (label ?? "").replace(/\s+/g, "");
+  return SIZE_PRESET_LABELS.has(normalized) ? normalized : "自訂尺寸";
+}
+
+function templateSizeText(template: DmEditorProps["template"]) {
+  const widthMm = template.width_mm ?? Math.round(((template.width_px ?? template.width) / 300) * 25.4);
+  const heightMm = template.height_mm ?? Math.round(((template.height_px ?? template.height) / 300) * 25.4);
+  return `${normalizeSizeLabel(template.size_label)}｜${widthMm} × ${heightMm} mm`;
+}
+
 function contactValueForBlock(label: string, data: {
   teamName: string;
   departmentName: string;
@@ -491,7 +504,7 @@ export function DmEditor({ teamId, team, template, departments, contacts }: DmEd
               <p className="eyebrow">Step 4</p>
               <h2 className="section-title">即時預覽</h2>
             </div>
-            <span className="status-pill border-gold-300 bg-gold-50 text-gold-700">{template.size_label}</span>
+            <span className="status-pill border-gold-300 bg-gold-50 text-gold-700">{templateSizeText(template)}</span>
           </div>
           <div className="mt-5">
             <TemplateCanvasPreview

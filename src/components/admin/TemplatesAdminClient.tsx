@@ -8,6 +8,84 @@ import type { Team, Template } from "@/types/database";
 
 type TemplateWithCount = Template & { block_count?: number };
 
+const SIZE_PRESETS = [
+  { label: "A4直式", widthMm: 210, heightMm: 297 },
+  { label: "A4橫式", widthMm: 297, heightMm: 210 },
+  { label: "名片", widthMm: 90, heightMm: 54 },
+  { label: "IG貼文", widthMm: 108, heightMm: 108 },
+  { label: "IG限動", widthMm: 108, heightMm: 192 },
+  { label: "自訂尺寸", widthMm: 210, heightMm: 297 }
+];
+
+function normalizeSizeLabel(label?: string | null) {
+  const normalized = (label ?? "").replace(/\s+/g, "");
+  return SIZE_PRESETS.some((preset) => preset.label === normalized) ? normalized : "自訂尺寸";
+}
+
+function mmFromTemplate(template: TemplateWithCount, key: "width" | "height") {
+  const mmValue = key === "width" ? template.width_mm : template.height_mm;
+  if (typeof mmValue === "number") return mmValue;
+  const pxValue = key === "width" ? template.width_px ?? template.width : template.height_px ?? template.height;
+  return Math.round((pxValue / 300) * 25.4);
+}
+
+function TemplateSizeFields({ template }: { template?: TemplateWithCount }) {
+  const initialPreset = normalizeSizeLabel(template?.size_label ?? "A4直式");
+  const initial = SIZE_PRESETS.find((preset) => preset.label === initialPreset) ?? SIZE_PRESETS[0];
+  const [preset, setPreset] = useState(initialPreset);
+  const [widthMm, setWidthMm] = useState(template ? mmFromTemplate(template, "width") : initial.widthMm);
+  const [heightMm, setHeightMm] = useState(template ? mmFromTemplate(template, "height") : initial.heightMm);
+  const isCustom = preset === "自訂尺寸";
+
+  function changePreset(nextPreset: string) {
+    setPreset(nextPreset);
+    const next = SIZE_PRESETS.find((item) => item.label === nextPreset);
+    if (next && next.label !== "自訂尺寸") {
+      setWidthMm(next.widthMm);
+      setHeightMm(next.heightMm);
+    }
+  }
+
+  return (
+    <>
+      <label>
+        <span className="field-label">尺寸類型</span>
+        <select name="size_label" value={preset} onChange={(event) => changePreset(event.currentTarget.value)}>
+          {SIZE_PRESETS.map((item) => (
+            <option key={item.label} value={item.label}>
+              {item.label}
+            </option>
+          ))}
+        </select>
+      </label>
+      <label>
+        <span className="field-label">寬度 mm</span>
+        <input
+          name="width_mm"
+          type="number"
+          min={1}
+          step="0.1"
+          value={widthMm}
+          readOnly={!isCustom}
+          onChange={(event) => setWidthMm(Number(event.currentTarget.value))}
+        />
+      </label>
+      <label>
+        <span className="field-label">高度 mm</span>
+        <input
+          name="height_mm"
+          type="number"
+          min={1}
+          step="0.1"
+          value={heightMm}
+          readOnly={!isCustom}
+          onChange={(event) => setHeightMm(Number(event.currentTarget.value))}
+        />
+      </label>
+    </>
+  );
+}
+
 export function TemplatesAdminClient({
   initialTeams,
   initialTemplates
@@ -63,18 +141,7 @@ export function TemplatesAdminClient({
           <span className="field-label">分類</span>
           <input name="category" placeholder="例如：每月精選物件" />
         </label>
-        <label>
-          <span className="field-label">尺寸名稱</span>
-          <input name="size_label" defaultValue="A4 直式" />
-        </label>
-        <label>
-          <span className="field-label">寬度 px</span>
-          <input name="width" type="number" defaultValue={794} />
-        </label>
-        <label>
-          <span className="field-label">高度 px</span>
-          <input name="height" type="number" defaultValue={1123} />
-        </label>
+        <TemplateSizeFields />
         <label>
           <span className="field-label">狀態</span>
           <select name="status" defaultValue="draft">
@@ -128,7 +195,10 @@ export function TemplatesAdminClient({
                   </td>
                   <td>{team?.name ?? "-"}</td>
                   <td>{template.category || "-"}</td>
-                  <td>{template.size_label}</td>
+                  <td>
+                    <strong className="block text-navy-900">{normalizeSizeLabel(template.size_label)}</strong>
+                    <span className="block text-sm text-slate-500">{mmFromTemplate(template, "width")} × {mmFromTemplate(template, "height")} mm</span>
+                  </td>
                   <td>{template.block_count ?? 0}</td>
                   <td>
                     <span className="status-pill border-gold-300 bg-gold-50 text-gold-700">
@@ -176,18 +246,7 @@ export function TemplatesAdminClient({
                           <span className="field-label">分類</span>
                           <input name="category" defaultValue={template.category} />
                         </label>
-                        <label>
-                          <span className="field-label">尺寸</span>
-                          <input name="size_label" defaultValue={template.size_label} />
-                        </label>
-                        <label>
-                          <span className="field-label">寬度</span>
-                          <input name="width" type="number" defaultValue={template.width} />
-                        </label>
-                        <label>
-                          <span className="field-label">高度</span>
-                          <input name="height" type="number" defaultValue={template.height} />
-                        </label>
+                        <TemplateSizeFields template={template} />
                         <label className="md:col-span-2">
                           <span className="field-label">模板介紹</span>
                           <textarea name="description" defaultValue={template.description ?? ""} />

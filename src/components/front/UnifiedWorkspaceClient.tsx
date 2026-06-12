@@ -53,6 +53,9 @@ export function UnifiedWorkspaceClient({
   }, []);
 
   const bannerUrl = data.settings?.banner_image_url ?? "";
+  const bannerDescription =
+    data.settings?.banner_description ||
+    "統一吉富工商地產團隊視覺，快速製作DM、名片與各式行銷模板，提升物件曝光與作業效率。";
 
   return (
     <main className="page-shell">
@@ -86,7 +89,7 @@ export function UnifiedWorkspaceClient({
             className="mt-4 max-w-2xl text-lg leading-8 text-white"
             style={{ textShadow: "0 2px 14px rgba(0,0,0,.55)" }}
           >
-            統一吉富工商地產團隊視覺，快速製作DM、名片與各式行銷模板，提升物件曝光與作業效率。
+            {bannerDescription}
           </p>
           <div className="mt-6 flex flex-wrap gap-3">
             <Link href="/admin" className="btn btn-secondary">

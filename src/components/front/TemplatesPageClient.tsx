@@ -11,6 +11,19 @@ interface TemplatesPageClientProps {
   templates?: TemplateWithBlocks[];
 }
 
+const SIZE_PRESET_LABELS = new Set(["A4直式", "A4橫式", "名片", "IG貼文", "IG限動", "自訂尺寸"]);
+
+function normalizeSizeLabel(label?: string | null) {
+  const normalized = (label ?? "").replace(/\s+/g, "");
+  return SIZE_PRESET_LABELS.has(normalized) ? normalized : "自訂尺寸";
+}
+
+function templateSizeText(template: TemplateWithBlocks) {
+  const widthMm = template.width_mm ?? Math.round(((template.width_px ?? template.width) / 300) * 25.4);
+  const heightMm = template.height_mm ?? Math.round(((template.height_px ?? template.height) / 300) * 25.4);
+  return `${normalizeSizeLabel(template.size_label)}｜${widthMm} × ${heightMm} mm`;
+}
+
 export function TemplatesPageClient({ teams = [], templates = [] }: TemplatesPageClientProps) {
   const searchParams = useSearchParams();
   const [data, setData] = useState({ teams, templates });
@@ -110,7 +123,7 @@ export function TemplatesPageClient({ teams = [], templates = [] }: TemplatesPag
                 )}
               </div>
               <div className="mt-4 flex flex-wrap gap-2">
-                <span className="status-pill border-gold-300 bg-gold-50 text-gold-700">{template.size_label}</span>
+                <span className="status-pill border-gold-300 bg-gold-50 text-gold-700">{templateSizeText(template)}</span>
                 <span className="status-pill border-line bg-white text-slate-600">{template.blocks.length} 個區塊</span>
               </div>
               <h2 className="mt-4 text-2xl font-black text-navy-900">{template.name}</h2>

@@ -80,9 +80,13 @@ create table if not exists templates (
   team_id uuid not null references teams(id) on delete cascade,
   name text not null,
   category text not null default '每月精選物件',
-  size_label text not null default 'A4 直式',
+  size_label text not null default 'A4直式',
   width integer not null default 794,
   height integer not null default 1123,
+  width_mm numeric(10,2),
+  height_mm numeric(10,2),
+  width_px integer,
+  height_px integer,
   status template_status not null default 'draft',
   image_url text not null,
   thumbnail_url text,
@@ -205,12 +209,24 @@ alter table departments add column if not exists sort_order integer not null def
 alter table departments add column if not exists is_active boolean not null default true;
 alter table contacts add column if not exists department_id uuid references departments(id) on delete set null;
 alter table templates add column if not exists description text;
+alter table templates add column if not exists width_mm numeric(10,2);
+alter table templates add column if not exists height_mm numeric(10,2);
+alter table templates add column if not exists width_px integer;
+alter table templates add column if not exists height_px integer;
 alter table print_options add column if not exists vendor text;
 alter table print_requests add column if not exists total_quantity integer not null default 0;
 alter table print_requests add column if not exists material_summary text;
 alter table print_requests add column if not exists vendor text;
 alter table print_requests add column if not exists batch_items jsonb not null default '[]'::jsonb;
 alter table site_settings add column if not exists banner_image_url text;
+alter table site_settings add column if not exists banner_description text;
+
+update templates
+set
+  width_px = coalesce(width_px, width),
+  height_px = coalesce(height_px, height),
+  width_mm = coalesce(width_mm, round((width::numeric / 300 * 25.4), 2)),
+  height_mm = coalesce(height_mm, round((height::numeric / 300 * 25.4), 2));
 
 drop trigger if exists teams_set_updated_at on teams;
 create trigger teams_set_updated_at before update on teams for each row execute function set_updated_at();

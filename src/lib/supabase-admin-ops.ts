@@ -19,6 +19,18 @@ function numberValue(formData: FormData, key: string, fallback: number) {
   return Number.isFinite(value) ? value : fallback;
 }
 
+function mmToPx(mm: number) {
+  return Math.round((mm / 25.4) * 300);
+}
+
+function templateDimensions(formData: FormData) {
+  const widthMm = numberValue(formData, "width_mm", 210);
+  const heightMm = numberValue(formData, "height_mm", 297);
+  const widthPx = mmToPx(widthMm);
+  const heightPx = mmToPx(heightMm);
+  return { widthMm, heightMm, widthPx, heightPx };
+}
+
 function jsonArrayValue(formData: FormData, key: string) {
   const value = formData.get(key);
   if (!value) return [];
@@ -102,13 +114,18 @@ async function uploadFile(bucket: string, file: File | null, prefix: string) {
 
 async function createTemplateFromFile(supabase: SupabaseClient, formData: FormData, file: File, index: number, total: number) {
   const imageUrl = await uploadFile(TEMPLATE_ASSETS_BUCKET, file, "templates");
+  const dimensions = templateDimensions(formData);
   const { error } = await supabase.from("templates").insert({
     team_id: textValue(formData, "team_id"),
     name: total > 1 ? `${textValue(formData, "name")} ${index + 1}` : textValue(formData, "name"),
     category: textValue(formData, "category", "每月精選物件"),
-    size_label: textValue(formData, "size_label", "A4 直式"),
-    width: numberValue(formData, "width", 794),
-    height: numberValue(formData, "height", 1123),
+    size_label: textValue(formData, "size_label", "A4直式"),
+    width: dimensions.widthPx,
+    height: dimensions.heightPx,
+    width_px: dimensions.widthPx,
+    height_px: dimensions.heightPx,
+    width_mm: dimensions.widthMm,
+    height_mm: dimensions.heightMm,
     status: textValue(formData, "status", "draft"),
     image_url: imageUrl,
     thumbnail_url: null,
@@ -336,13 +353,18 @@ export async function runAdminOperation(operation: string, formData: FormData) {
   }
 
   if (operation === "update-template") {
+    const dimensions = templateDimensions(formData);
     const patch: Record<string, unknown> = {
       team_id: textValue(formData, "team_id"),
       name: textValue(formData, "name"),
       category: textValue(formData, "category", "每月精選物件"),
-      size_label: textValue(formData, "size_label", "A4 直式"),
-      width: numberValue(formData, "width", 794),
-      height: numberValue(formData, "height", 1123),
+      size_label: textValue(formData, "size_label", "A4直式"),
+      width: dimensions.widthPx,
+      height: dimensions.heightPx,
+      width_px: dimensions.widthPx,
+      height_px: dimensions.heightPx,
+      width_mm: dimensions.widthMm,
+      height_mm: dimensions.heightMm,
       description: textValue(formData, "description"),
       notes: textValue(formData, "notes")
     };
@@ -469,7 +491,8 @@ export async function runAdminOperation(operation: string, formData: FormData) {
     const bannerUrl = await uploadFile(SITE_ASSETS_BUCKET, formData.get("banner") as File | null, "banners");
     const patch: SiteSettings = {
       id: "main",
-      banner_image_url: bannerUrl || textValue(formData, "current_banner_url") || null
+      banner_image_url: bannerUrl || textValue(formData, "current_banner_url") || null,
+      banner_description: textValue(formData, "banner_description")
     };
     const { error } = await supabase.from("site_settings").upsert(patch, { onConflict: "id" });
     if (error) throw new Error(readableSupabaseError(error));

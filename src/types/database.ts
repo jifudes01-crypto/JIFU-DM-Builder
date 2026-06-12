@@ -23,6 +23,7 @@ export type ExportFormat = "png" | "jpg" | "pdf";
 export interface SiteSettings {
   id: string;
   banner_image_url: string | null;
+  banner_description: string | null;
   created_at?: string;
   updated_at?: string;
 }
@@ -59,6 +60,10 @@ export interface Template {
   size_label: string;
   width: number;
   height: number;
+  width_mm: number | null;
+  height_mm: number | null;
+  width_px: number | null;
+  height_px: number | null;
   status: TemplateStatus;
   image_url: string;
   thumbnail_url: string | null;

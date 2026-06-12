@@ -38,6 +38,18 @@ function numberValue(formData: FormData, key: string, fallback: number) {
   return Number.isFinite(value) ? value : fallback;
 }
 
+function mmToPx(mm: number) {
+  return Math.round((mm / 25.4) * 300);
+}
+
+function templateDimensions(formData: FormData) {
+  const widthMm = numberValue(formData, "width_mm", 210);
+  const heightMm = numberValue(formData, "height_mm", 297);
+  const widthPx = mmToPx(widthMm);
+  const heightPx = mmToPx(heightMm);
+  return { widthMm, heightMm, widthPx, heightPx };
+}
+
 function safeFileName(name: string) {
   return name.replace(/[^\w.-]+/g, "-").replace(/-+/g, "-").toLowerCase();
 }
@@ -81,6 +93,7 @@ export async function createTemplateAction(formData: FormData) {
   const teamId = textValue(formData, "team_id");
   const supabase = createSupabaseAdminClient();
   const name = textValue(formData, "name");
+  const dimensions = templateDimensions(formData);
   const rows = await Promise.all(
     files.map(async (file, index) => {
       const imageUrl = await uploadFile("template-assets", file, teamId);
@@ -88,12 +101,17 @@ export async function createTemplateAction(formData: FormData) {
         team_id: teamId,
         name: files.length > 1 ? `${name} ${index + 1}` : name,
         category: textValue(formData, "category", "每月精選物件"),
-        size_label: textValue(formData, "size_label", "A4 直式"),
-        width: numberValue(formData, "width", 794),
-        height: numberValue(formData, "height", 1123),
+        size_label: textValue(formData, "size_label", "A4直式"),
+        width: dimensions.widthPx,
+        height: dimensions.heightPx,
+        width_px: dimensions.widthPx,
+        height_px: dimensions.heightPx,
+        width_mm: dimensions.widthMm,
+        height_mm: dimensions.heightMm,
         status: textValue(formData, "status", "draft"),
         image_url: imageUrl,
         thumbnail_url: imageUrl,
+        description: textValue(formData, "description") || null,
         notes: textValue(formData, "notes") || null
       };
     })
@@ -196,13 +214,19 @@ export async function updateTemplateAction(formData: FormData) {
   assertSupabaseReady();
   const templateId = textValue(formData, "template_id");
   const file = formData.get("image") as File | null;
+  const dimensions = templateDimensions(formData);
   const patch: Record<string, unknown> = {
     team_id: textValue(formData, "team_id"),
     name: textValue(formData, "name"),
     category: textValue(formData, "category", "每月精選物件"),
-    size_label: textValue(formData, "size_label", "A4 直式"),
-    width: numberValue(formData, "width", 794),
-    height: numberValue(formData, "height", 1123),
+    size_label: textValue(formData, "size_label", "A4直式"),
+    width: dimensions.widthPx,
+    height: dimensions.heightPx,
+    width_px: dimensions.widthPx,
+    height_px: dimensions.heightPx,
+    width_mm: dimensions.widthMm,
+    height_mm: dimensions.heightMm,
+    description: textValue(formData, "description") || null,
     notes: textValue(formData, "notes") || null
   };
 
@@ -264,9 +288,14 @@ export async function duplicateTemplateAction(formData: FormData) {
       size_label: template.size_label,
       width: template.width,
       height: template.height,
+      width_px: template.width_px,
+      height_px: template.height_px,
+      width_mm: template.width_mm,
+      height_mm: template.height_mm,
       status: "draft",
       image_url: template.image_url,
       thumbnail_url: template.thumbnail_url,
+      description: template.description,
       notes: template.notes,
       duplicated_from: template.id
     })

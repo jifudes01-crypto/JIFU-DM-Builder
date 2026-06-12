@@ -28,7 +28,7 @@ export function SiteSettingsAdminClient({ initialSettings }: { initialSettings: 
         <div className="p-5">
           <p className="eyebrow">首頁 Banner</p>
           <h2 className="mt-2 text-2xl font-black text-navy-900">共用模板系統首頁設定</h2>
-          <p className="section-subtitle">上傳後，前台重新整理會立即讀取 Supabase 最新 Banner。</p>
+          <p className="section-subtitle">上傳後，前台重新整理會立即讀取 Supabase 最新 Banner。建議尺寸：1920 × 800 px。</p>
 
           {message ? <p className="mt-4 rounded-lg bg-amber-50 p-3 text-sm font-bold text-amber-900">{message}</p> : null}
 
@@ -37,10 +37,17 @@ export function SiteSettingsAdminClient({ initialSettings }: { initialSettings: 
             <label>
               <span className="field-label">Banner 圖片</span>
               <input name="banner" type="file" accept="image/*" />
-              <span className="field-help">建議使用寬版圖片。若未選新圖，會保留目前 Banner。</span>
+              <span className="field-help">建議尺寸：1920 × 800 px。若未選新圖，會保留目前 Banner。</span>
+            </label>
+            <label>
+              <span className="field-label">Banner 說明文字</span>
+              <textarea
+                name="banner_description"
+                defaultValue={settings?.banner_description ?? "統一吉富工商地產團隊視覺，快速製作DM、名片與各式行銷模板，提升物件曝光與作業效率。"}
+              />
             </label>
             <button type="submit" className="btn btn-blue">
-              儲存 Banner
+              儲存首頁設定
             </button>
           </StaticForm>
         </div>

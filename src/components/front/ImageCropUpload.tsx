@@ -18,6 +18,10 @@ interface ImageSize {
   height: number;
 }
 
+function clampZoom(value: number) {
+  return Math.min(3, Math.max(1, value));
+}
+
 function readFileAsDataUrl(file: File) {
   return new Promise<string>((resolve, reject) => {
     const reader = new FileReader();
@@ -49,6 +53,8 @@ export function ImageCropUpload({
   const inputRef = useRef<HTMLInputElement | null>(null);
   const cropRef = useRef<HTMLDivElement | null>(null);
   const dragRef = useRef({ dragging: false, startX: 0, startY: 0, originX: 0, originY: 0 });
+  const pointersRef = useRef(new Map<number, { x: number; y: number }>());
+  const pinchRef = useRef({ distance: 0, zoom: 1 });
   const [source, setSource] = useState("");
   const [imageSize, setImageSize] = useState<ImageSize | null>(null);
   const [cropSize, setCropSize] = useState({ width: 320, height: Math.round(320 / aspectRatio) });
@@ -84,6 +90,12 @@ export function ImageCropUpload({
     setZoom(1);
   }
 
+  function pointerDistance() {
+    const points = Array.from(pointersRef.current.values());
+    if (points.length < 2) return 0;
+    return Math.hypot(points[0].x - points[1].x, points[0].y - points[1].y);
+  }
+
   async function useFile(file?: File) {
     if (!file) return;
     if (!["image/jpeg", "image/png", "image/webp"].includes(file.type)) {
@@ -106,6 +118,14 @@ export function ImageCropUpload({
 
   function handlePointerDown(event: PointerEvent<HTMLDivElement>) {
     event.currentTarget.setPointerCapture(event.pointerId);
+    pointersRef.current.set(event.pointerId, { x: event.clientX, y: event.clientY });
+
+    if (pointersRef.current.size >= 2) {
+      dragRef.current.dragging = false;
+      pinchRef.current = { distance: pointerDistance(), zoom };
+      return;
+    }
+
     dragRef.current = {
       dragging: true,
       startX: event.clientX,
@@ -116,6 +136,18 @@ export function ImageCropUpload({
   }
 
   function handlePointerMove(event: PointerEvent<HTMLDivElement>) {
+    if (pointersRef.current.has(event.pointerId)) {
+      pointersRef.current.set(event.pointerId, { x: event.clientX, y: event.clientY });
+    }
+
+    if (pointersRef.current.size >= 2) {
+      const distance = pointerDistance();
+      if (distance > 0 && pinchRef.current.distance > 0) {
+        setZoom(clampZoom(pinchRef.current.zoom * (distance / pinchRef.current.distance)));
+      }
+      return;
+    }
+
     if (!dragRef.current.dragging) return;
     setPosition({
       x: dragRef.current.originX + event.clientX - dragRef.current.startX,
@@ -123,8 +155,21 @@ export function ImageCropUpload({
     });
   }
 
-  function stopDragging() {
+  function stopDragging(event: PointerEvent<HTMLDivElement>) {
+    pointersRef.current.delete(event.pointerId);
     dragRef.current.dragging = false;
+    pinchRef.current = { distance: 0, zoom };
+
+    const remainingPointer = Array.from(pointersRef.current.values())[0];
+    if (remainingPointer) {
+      dragRef.current = {
+        dragging: true,
+        startX: remainingPointer.x,
+        startY: remainingPointer.y,
+        originX: position.x,
+        originY: position.y
+      };
+    }
   }
 
   async function applyCrop() {
@@ -221,6 +266,10 @@ export function ImageCropUpload({
               onPointerMove={handlePointerMove}
               onPointerUp={stopDragging}
               onPointerCancel={stopDragging}
+              onWheel={(event) => {
+                event.preventDefault();
+                setZoom((current) => clampZoom(current + (event.deltaY < 0 ? 0.08 : -0.08)));
+              }}
             >
               {source && imageSize ? (
                 // eslint-disable-next-line @next/next/no-img-element
@@ -247,15 +296,15 @@ export function ImageCropUpload({
                 max="3"
                 step="0.05"
                 value={zoom}
-                onChange={(event) => setZoom(Number(event.currentTarget.value))}
+                onChange={(event) => setZoom(clampZoom(Number(event.currentTarget.value)))}
               />
             </label>
 
             <div className="mt-4 grid grid-cols-2 gap-3 sm:grid-cols-5">
-              <button type="button" className="btn btn-secondary" onClick={() => setZoom((current) => Math.min(3, current + 0.15))}>
+              <button type="button" className="btn btn-secondary" onClick={() => setZoom((current) => clampZoom(current + 0.15))}>
                 放大
               </button>
-              <button type="button" className="btn btn-secondary" onClick={() => setZoom((current) => Math.max(1, current - 0.15))}>
+              <button type="button" className="btn btn-secondary" onClick={() => setZoom((current) => clampZoom(current - 0.15))}>
                 縮小
               </button>
               <button type="button" className="btn btn-muted" onClick={resetCrop}>
