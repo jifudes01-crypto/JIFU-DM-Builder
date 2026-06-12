@@ -262,8 +262,8 @@ export function DmEditor({ teamId: _teamId, team, template, departments, contact
   const scale = useMemo(() => {
     const leftPanel = viewport.width >= 1280 ? 280 : 0;
     const rightPanel = viewport.width >= 1280 ? 300 : 0;
-    const pagePadding = viewport.width >= 1280 ? 120 : 48;
-    const centerCardPadding = 42;
+    const pagePadding = viewport.width >= 1280 ? 170 : 48;
+    const centerCardPadding = 54;
     const availableWidth = Math.max(280, viewport.width - leftPanel - rightPanel - pagePadding - centerCardPadding);
     const availableHeight = Math.max(360, viewport.height - 250);
     const fitScale = Math.min(availableWidth / template.width, availableHeight / template.height);
@@ -434,7 +434,7 @@ export function DmEditor({ teamId: _teamId, team, template, departments, contact
   }
 
   return (
-    <div className="grid items-start gap-5 xl:grid-cols-[280px_minmax(0,1fr)_300px]">
+    <div className="grid items-start gap-8 xl:grid-cols-[280px_minmax(0,1fr)_300px]">
       <section className="space-y-4 xl:sticky xl:top-4">
         <div className="luxury-panel">
           <p className="text-sm font-black uppercase tracking-normal text-gold-300">PPT Editor</p>
@@ -576,7 +576,7 @@ export function DmEditor({ teamId: _teamId, team, template, departments, contact
         ) : null}
       </section>
 
-      <aside className="space-y-4 xl:sticky xl:top-4">
+      <aside className="space-y-4 xl:sticky xl:top-4 xl:translate-x-4">
         <div className="card p-4">
           <p className="eyebrow">Style Panel</p>
           <h2 className="section-title text-2xl">文字編輯</h2>
@@ -634,7 +634,7 @@ export function DmEditor({ teamId: _teamId, team, template, departments, contact
         <div className="card p-4">
           <p className="eyebrow">Reference</p>
           <h2 className="section-title text-2xl">展示圖參考</h2>
-          <div className="mt-4 rounded-xl border border-dashed border-gold-300 bg-gold-50 p-5 text-sm font-bold leading-6 text-navy-900">
+          <div className="mt-4 rounded-xl border border-dashed border-gold-300 bg-gold-50 p-4 text-sm font-bold leading-6 text-navy-900">
             展示圖之後會放到模板列表或收合區，不會壓縮中間 DM 編輯畫布。
           </div>
         </div>
