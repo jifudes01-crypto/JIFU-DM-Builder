@@ -19,6 +19,17 @@ function numberValue(formData: FormData, key: string, fallback: number) {
   return Number.isFinite(value) ? value : fallback;
 }
 
+function jsonArrayValue(formData: FormData, key: string) {
+  const value = formData.get(key);
+  if (!value) return [];
+  try {
+    const parsed = JSON.parse(String(value));
+    return Array.isArray(parsed) ? parsed.map((item) => String(item)).filter(Boolean) : [];
+  } catch {
+    return [];
+  }
+}
+
 function slugValue(value: string) {
   return (
     value
@@ -415,6 +426,43 @@ export async function runAdminOperation(operation: string, formData: FormData) {
     const { error } = await supabase.from("contacts").update({ is_active: formData.get("is_active") === "true" }).eq("id", textValue(formData, "contact_id"));
     if (error) throw new Error(readableSupabaseError(error));
     return "人員狀態已同步。";
+  }
+
+  if (operation === "bulk-contact-team") {
+    const ids = jsonArrayValue(formData, "contact_ids");
+    if (!ids.length) throw new Error("請先勾選要修改的業務。");
+    const teamId = textValue(formData, "team_id");
+    if (!teamId) throw new Error("請選擇要套用的公司 / 團隊。");
+    const { error } = await supabase.from("contacts").update({ team_id: teamId }).in("id", ids);
+    if (error) throw new Error(readableSupabaseError(error));
+    return `已批量修改 ${ids.length} 筆業務的公司 / 團隊。`;
+  }
+
+  if (operation === "bulk-contact-department") {
+    const ids = jsonArrayValue(formData, "contact_ids");
+    if (!ids.length) throw new Error("請先勾選要修改的業務。");
+    const departmentId = textValue(formData, "department_id");
+    if (!departmentId) throw new Error("請選擇要套用的團隊＆店名。");
+    const { error } = await supabase.from("contacts").update({ department_id: departmentId }).in("id", ids);
+    if (error) throw new Error(readableSupabaseError(error));
+    return `已批量修改 ${ids.length} 筆業務的團隊＆店名。`;
+  }
+
+  if (operation === "bulk-contact-status") {
+    const ids = jsonArrayValue(formData, "contact_ids");
+    if (!ids.length) throw new Error("請先勾選要修改的業務。");
+    const isActive = formData.get("is_active") === "true";
+    const { error } = await supabase.from("contacts").update({ is_active: isActive }).in("id", ids);
+    if (error) throw new Error(readableSupabaseError(error));
+    return `已批量${isActive ? "啟用" : "停用"} ${ids.length} 筆業務。`;
+  }
+
+  if (operation === "bulk-delete-contacts") {
+    const ids = jsonArrayValue(formData, "contact_ids");
+    if (!ids.length) throw new Error("請先勾選要刪除的業務。");
+    const { error } = await supabase.from("contacts").delete().in("id", ids);
+    if (error) throw new Error(readableSupabaseError(error));
+    return `已批量刪除 ${ids.length} 筆業務。`;
   }
 
   if (operation === "update-site-settings") {
