@@ -13,8 +13,8 @@ export default async function AdminPage() {
   ]);
 
   const cards = [
-    { label: "團隊", value: teams.length, href: "/admin/teams" },
-    { label: "部門", value: departments.length, href: "/admin/departments" },
+    { label: "公司", value: teams.length, href: "/admin/teams" },
+    { label: "團隊＆店名", value: departments.length, href: "/admin/departments" },
     { label: "模板", value: templates.length, href: "/admin/templates" },
     { label: "通訊錄", value: contacts.length, href: "/admin/contacts" },
     { label: "下載紀錄", value: stats.downloadRecords, href: "/admin/downloads" }

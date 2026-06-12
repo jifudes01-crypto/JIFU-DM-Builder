@@ -27,9 +27,9 @@ export function TeamsAdminClient({ initialTeams }: { initialTeams: Team[] }) {
   return (
     <section className="space-y-6">
       <div className="luxury-panel">
-        <p className="text-sm font-black uppercase tracking-normal text-gold-300">Teams</p>
-        <h1 className="mt-2 text-3xl font-black text-white">團隊管理</h1>
-        <p className="mt-3 text-base leading-7 text-slate-200">前台會顯示啟用中的團隊名稱、小 Logo 與簡易敘述，請在這裡獨立維護。</p>
+        <p className="text-sm font-black uppercase tracking-normal text-gold-300">COMPANIES</p>
+        <h1 className="mt-2 text-3xl font-black text-white">公司管理</h1>
+        <p className="mt-3 text-base leading-7 text-slate-200">管理公司品牌、小 Logo、公司簡介與前台顯示資訊。</p>
       </div>
 
       {message ? <p className="rounded-lg bg-amber-50 p-4 text-base font-bold text-amber-900">{message}</p> : null}
