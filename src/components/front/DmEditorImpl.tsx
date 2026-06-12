@@ -53,6 +53,19 @@ function useLoadedImage(src?: string | null) {
   return image;
 }
 
+function useViewportSize() {
+  const [size, setSize] = useState({ width: 1280, height: 860 });
+
+  useEffect(() => {
+    const update = () => setSize({ width: window.innerWidth, height: window.innerHeight });
+    update();
+    window.addEventListener("resize", update);
+    return () => window.removeEventListener("resize", update);
+  }, []);
+
+  return size;
+}
+
 function downloadDataUrl(dataUrl: string, filename: string) {
   const link = document.createElement("a");
   link.href = dataUrl;
@@ -84,17 +97,6 @@ function readFileAsDataUrl(file?: File | null) {
     reader.onerror = () => reject(new Error("讀取圖片失敗。"));
     reader.readAsDataURL(file);
   });
-}
-
-function getTemplateExampleImageUrl(template: DmEditorProps["template"]) {
-  const source = template as DmEditorProps["template"] & {
-    example_image_url?: string | null;
-    sample_image_url?: string | null;
-    reference_image_url?: string | null;
-    demo_image_url?: string | null;
-  };
-
-  return source.example_image_url || source.sample_image_url || source.reference_image_url || source.demo_image_url || null;
 }
 
 function EditableImage({
@@ -134,13 +136,7 @@ function EditableImage({
         draggable
         onClick={onSelect}
         onTap={onSelect}
-        onDragEnd={(event) =>
-          onChange({
-            ...element,
-            x: event.target.x(),
-            y: event.target.y()
-          })
-        }
+        onDragEnd={(event) => onChange({ ...element, x: event.target.x(), y: event.target.y() })}
         onTransformEnd={() => {
           const node = shapeRef.current;
           if (!node) return;
@@ -208,13 +204,7 @@ function EditableText({
         onTap={onSelect}
         onDblClick={onEditText}
         onDblTap={onEditText}
-        onDragEnd={(event) =>
-          onChange({
-            ...element,
-            x: event.target.x(),
-            y: event.target.y()
-          })
-        }
+        onDragEnd={(event) => onChange({ ...element, x: event.target.x(), y: event.target.y() })}
         onTransformEnd={() => {
           const node = shapeRef.current;
           if (!node) return;
@@ -255,6 +245,7 @@ function contactSummary(contact: DmEditorProps["contacts"][number] | null, teamN
 
 export function DmEditor({ teamId: _teamId, team, template, departments, contacts }: DmEditorProps) {
   const backgroundImage = useLoadedImage(template.image_url);
+  const viewport = useViewportSize();
   const stageRef = useRef<Konva.Stage | null>(null);
   const [departmentId, setDepartmentId] = useState("");
   const [contactId, setContactId] = useState(contacts[0]?.id ?? "");
@@ -267,13 +258,14 @@ export function DmEditor({ teamId: _teamId, team, template, departments, contact
   const filteredContacts = contacts.filter((contact) => !departmentId || contact.department_id === departmentId);
   const selectedContact = filteredContacts.find((contact) => contact.id === contactId) ?? filteredContacts[0] ?? null;
   const selectedElement = elements.find((element) => element.id === selectedId) ?? null;
-  const exampleImageUrl = getTemplateExampleImageUrl(template);
 
   const scale = useMemo(() => {
-    if (typeof window === "undefined") return 0.42;
-    const maxWidth = Math.min(740, Math.max(320, window.innerWidth - 760));
-    return Math.min(0.72, maxWidth / template.width);
-  }, [template.width]);
+    const sidePanels = viewport.width >= 1280 ? 680 : viewport.width >= 1024 ? 320 : 40;
+    const availableWidth = Math.max(320, viewport.width - sidePanels - 96);
+    const availableHeight = Math.max(420, viewport.height - 210);
+    const fitScale = Math.min(availableWidth / template.width, availableHeight / template.height);
+    return Math.min(0.92, Math.max(0.28, fitScale));
+  }, [template.height, template.width, viewport.height, viewport.width]);
 
   useEffect(() => {
     if (selectedContact && selectedContact.id !== contactId) {
@@ -345,6 +337,7 @@ export function DmEditor({ teamId: _teamId, team, template, departments, contact
       setMessage(`目前沒有可插入的${label}。`);
       return;
     }
+
     const next: CanvasElement = {
       id: crypto.randomUUID(),
       type: "image",
@@ -438,15 +431,15 @@ export function DmEditor({ teamId: _teamId, team, template, departments, contact
   }
 
   return (
-    <div className="grid gap-6 2xl:grid-cols-[300px_minmax(420px,1fr)_340px] xl:grid-cols-[280px_minmax(420px,1fr)_320px]">
-      <section className="space-y-5">
+    <div className="grid gap-5 xl:grid-cols-[280px_minmax(420px,1fr)_300px]">
+      <section className="space-y-4">
         <div className="luxury-panel">
           <p className="text-sm font-black uppercase tracking-normal text-gold-300">PPT Editor</p>
           <h1 className="mt-2 text-3xl font-black text-white">自由編輯</h1>
           <p className="mt-3 text-base leading-7 text-slate-200">底圖由後台提供，業務可自行新增文字、圖片並拖曳縮放。</p>
         </div>
 
-        <div className="card p-5">
+        <div className="card p-4">
           <label className="field-label" htmlFor="departmentId">團隊＆店名</label>
           <select id="departmentId" value={departmentId} onChange={(event) => setDepartmentId(event.target.value)}>
             <option value="">全部</option>
@@ -472,44 +465,31 @@ export function DmEditor({ teamId: _teamId, team, template, departments, contact
           </button>
         </div>
 
-        <div className="card p-5">
+        <div className="card p-4">
           <p className="field-label">新增元素</p>
-          <div className="grid gap-3">
-            <button type="button" className="btn btn-primary" onClick={() => addText()}>
-              新增文字
-            </button>
-
+          <div className="grid gap-2">
+            <button type="button" className="btn btn-primary" onClick={() => addText()}>新增文字</button>
             <label className="btn btn-secondary cursor-pointer text-center">
               上傳圖片
               <input type="file" accept="image/png,image/jpeg,image/webp" className="hidden" onChange={(event) => void addImageFromFile(event.currentTarget.files?.[0])} />
             </label>
-
-            <button type="button" className="btn btn-secondary" onClick={() => void addImageFromUrl(selectedContact?.avatar_url, "形象照")}>
-              插入形象照
-            </button>
-
-            <button type="button" className="btn btn-secondary" onClick={() => void addQrCode()}>
-              插入 QR Code
-            </button>
+            <button type="button" className="btn btn-secondary" onClick={() => void addImageFromUrl(selectedContact?.avatar_url, "形象照")}>插入形象照</button>
+            <button type="button" className="btn btn-secondary" onClick={() => void addQrCode()}>插入 QR Code</button>
           </div>
         </div>
 
-        <div className="card p-5">
+        <div className="card p-4">
           <p className="field-label">操作</p>
-          <div className="grid gap-3">
-            <button type="button" className="btn btn-secondary" onClick={deleteSelected} disabled={!selectedId}>
-              刪除選取元素
-            </button>
-            <button type="button" className="btn btn-secondary" onClick={clearCanvasElements}>
-              清除自行新增內容
-            </button>
+          <div className="grid gap-2">
+            <button type="button" className="btn btn-secondary" onClick={deleteSelected} disabled={!selectedId}>刪除選取元素</button>
+            <button type="button" className="btn btn-secondary" onClick={clearCanvasElements}>清除自行新增內容</button>
           </div>
         </div>
       </section>
 
-      <section className="space-y-5">
-        <div className="card p-5">
-          <div className="mb-4 flex flex-wrap items-center justify-between gap-3">
+      <section className="space-y-4">
+        <div className="card p-4">
+          <div className="mb-3 flex flex-wrap items-center justify-between gap-3">
             <div>
               <p className="eyebrow">{team.name}</p>
               <h2 className="section-title">{template.name}</h2>
@@ -521,13 +501,14 @@ export function DmEditor({ teamId: _teamId, team, template, departments, contact
             </div>
           </div>
 
-          <div className="overflow-auto rounded-2xl border border-line bg-slate-100 p-4 shadow-inner">
+          <div className="grid place-items-center rounded-2xl border border-line bg-slate-100 p-3 shadow-inner">
             <div style={{ width: template.width * scale, height: template.height * scale }}>
               <Stage
                 ref={stageRef}
                 width={template.width}
                 height={template.height}
-                style={{ transform: `scale(${scale})`, transformOrigin: "top left" }}
+                scaleX={scale}
+                scaleY={scale}
                 className="rounded-xl bg-white shadow-panel"
                 onMouseDown={(event) => {
                   if (event.target === event.target.getStage()) setSelectedId(null);
@@ -568,7 +549,7 @@ export function DmEditor({ teamId: _teamId, team, template, departments, contact
               </Stage>
             </div>
           </div>
-          <p className="mt-3 text-sm text-slate-500">操作提示：點選元素後可拖曳、拉角縮放、旋轉；雙擊文字可快速修改內容。</p>
+          <p className="mt-3 text-sm text-slate-500">畫布會自動縮放，完整顯示整張 DM；點選元素後可拖曳、拉角縮放、旋轉。</p>
         </div>
 
         {message ? <div className="card border-blue-200 bg-blue-50 p-4 text-base font-bold text-navy-900">{message}</div> : null}
@@ -582,8 +563,8 @@ export function DmEditor({ teamId: _teamId, team, template, departments, contact
         ) : null}
       </section>
 
-      <aside className="space-y-5">
-        <div className="card p-5">
+      <aside className="space-y-4">
+        <div className="card p-4">
           <p className="eyebrow">Style Panel</p>
           <h2 className="section-title text-2xl">文字編輯</h2>
           {selectedElement?.type === "text" ? (
@@ -637,18 +618,12 @@ export function DmEditor({ teamId: _teamId, team, template, departments, contact
           )}
         </div>
 
-        <div className="card p-5">
+        <div className="card p-4">
           <p className="eyebrow">Reference</p>
           <h2 className="section-title text-2xl">展示圖參考</h2>
-          {exampleImageUrl ? (
-            // eslint-disable-next-line @next/next/no-img-element
-            <img src={exampleImageUrl} alt="模板展示圖參考" className="mt-4 w-full rounded-xl border border-line bg-white object-contain" />
-          ) : (
-            <div className="mt-4 rounded-xl border border-dashed border-gold-300 bg-gold-50 p-5 text-sm font-bold leading-6 text-navy-900">
-              目前尚未設定展示圖。之後後台新增模板時，可另外上傳「展示圖 / 參考圖」，前台會在這裡同步顯示。
-            </div>
-          )}
-          <p className="mt-3 text-sm text-slate-500">展示圖只作為業務編輯參考，不會輸出到下載成品。</p>
+          <div className="mt-4 rounded-xl border border-dashed border-gold-300 bg-gold-50 p-5 text-sm font-bold leading-6 text-navy-900">
+            展示圖之後會放到模板列表或收合區，不會壓縮中間 DM 編輯畫布。
+          </div>
         </div>
       </aside>
     </div>
