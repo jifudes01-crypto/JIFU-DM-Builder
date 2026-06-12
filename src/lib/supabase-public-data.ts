@@ -1,7 +1,16 @@
 "use client";
 
 import { createSupabaseBrowserClient, isBrowserSupabaseConfigured } from "@/lib/supabase-browser";
-import type { Contact, Department, Team, Template, TemplateBlock, TemplateWithBlocks } from "@/types/database";
+import type {
+  Contact,
+  Department,
+  ExportRecord,
+  SiteSettings,
+  Team,
+  Template,
+  TemplateBlock,
+  TemplateWithBlocks
+} from "@/types/database";
 
 type TemplateWithBlockCount = Template & { block_count?: number };
 
@@ -15,25 +24,64 @@ function isMissingDepartmentSchema(error: unknown) {
   if (!error || typeof error !== "object") return false;
   const detail = error as { code?: string; message?: string; details?: string };
   const text = `${detail.message ?? ""} ${detail.details ?? ""}`.toLowerCase();
-  return ["42p01", "42703", "pgrst200", "pgrst205"].includes(String(detail.code ?? "").toLowerCase()) || text.includes("departments") || text.includes("department_id");
+
+  return (
+    ["42p01", "42703", "pgrst200", "pgrst205"].includes(String(detail.code ?? "").toLowerCase()) ||
+    text.includes("departments") ||
+    text.includes("department_id")
+  );
+}
+
+function isMissingOptionalSchema(error: unknown, tableName: string) {
+  if (!error || typeof error !== "object") return false;
+  const detail = error as { code?: string; message?: string; details?: string };
+  const text = `${detail.message ?? ""} ${detail.details ?? ""}`.toLowerCase();
+
+  return (
+    ["42p01", "42703", "pgrst200", "pgrst205"].includes(String(detail.code ?? "").toLowerCase()) ||
+    text.includes(tableName.toLowerCase())
+  );
 }
 
 export async function loadPublicWorkspaceData() {
   if (!(await isBrowserSupabaseConfigured())) return null;
   const supabase = await createSupabaseBrowserClient();
 
-  const [teams, departments, templates, contacts] = await Promise.all([
+  const [teams, departments, templates, contacts, settings] = await Promise.all([
     supabase.from("teams").select("*").eq("is_active", true).order("sort_order", { ascending: true }).order("name", { ascending: true }),
     supabase.from("departments").select("*").eq("is_active", true).order("sort_order", { ascending: true }).order("name", { ascending: true }),
     supabase.from("templates").select("*, template_blocks(count)").eq("status", "published").order("updated_at", { ascending: false }),
-    supabase.from("contacts").select("*").eq("is_active", true).order("name", { ascending: true })
+    supabase.from("contacts").select("*").eq("is_active", true).order("name", { ascending: true }),
+    supabase.from("site_settings").select("*").eq("id", "main").maybeSingle()
   ]);
 
   const errors = [teams.error, templates.error, contacts.error].filter(Boolean);
   if (errors[0]) throw errors[0];
   if (departments.error && !isMissingDepartmentSchema(departments.error)) throw departments.error;
+  if (settings.error && !isMissingOptionalSchema(settings.error, "site_settings")) throw settings.error;
 
-  const templateRows = (templates.data ?? []);
+  const templateRows = templates.data ?? [];
+
+  let downloadRecords = 0;
+  let downloads: ExportRecord[] = [];
+
+  const exportCountResult = await supabase.from("exports").select("id", { count: "exact", head: true });
+  if (!exportCountResult.error) {
+    downloadRecords = exportCountResult.count ?? 0;
+  } else if (!isMissingOptionalSchema(exportCountResult.error, "exports")) {
+    throw exportCountResult.error;
+  }
+
+  const downloadsResult = await supabase
+    .from("exports")
+    .select("*, teams(name), templates(name), contacts(name, mobile)")
+    .order("created_at", { ascending: false });
+
+  if (!downloadsResult.error) {
+    downloads = (downloadsResult.data ?? []) as ExportRecord[];
+  } else if (!isMissingOptionalSchema(downloadsResult.error, "exports")) {
+    throw downloadsResult.error;
+  }
 
   return {
     teams: (teams.data ?? []) as Team[],
@@ -44,12 +92,12 @@ export async function loadPublicWorkspaceData() {
       return { ...template, block_count: blockCountFromRelation(templateBlocks) };
     }) as TemplateWithBlockCount[],
     contacts: (contacts.data ?? []) as Contact[],
-    settings: null,
+    settings: settings.error ? null : ((settings.data as SiteSettings | null) ?? null),
     stats: {
       totalTemplates: templateRows.length,
-      downloadRecords: 0
+      downloadRecords
     },
-    downloads: []
+    downloads
   };
 }
 
