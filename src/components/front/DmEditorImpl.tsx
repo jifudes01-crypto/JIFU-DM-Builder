@@ -260,11 +260,14 @@ export function DmEditor({ teamId: _teamId, team, template, departments, contact
   const selectedElement = elements.find((element) => element.id === selectedId) ?? null;
 
   const scale = useMemo(() => {
-    const sidePanels = viewport.width >= 1280 ? 680 : viewport.width >= 1024 ? 320 : 40;
-    const availableWidth = Math.max(320, viewport.width - sidePanels - 96);
-    const availableHeight = Math.max(420, viewport.height - 210);
+    const leftPanel = viewport.width >= 1280 ? 280 : 0;
+    const rightPanel = viewport.width >= 1280 ? 300 : 0;
+    const pagePadding = viewport.width >= 1280 ? 120 : 48;
+    const centerCardPadding = 42;
+    const availableWidth = Math.max(280, viewport.width - leftPanel - rightPanel - pagePadding - centerCardPadding);
+    const availableHeight = Math.max(360, viewport.height - 250);
     const fitScale = Math.min(availableWidth / template.width, availableHeight / template.height);
-    return Math.min(0.92, Math.max(0.28, fitScale));
+    return Math.min(0.82, Math.max(0.24, fitScale));
   }, [template.height, template.width, viewport.height, viewport.width]);
 
   useEffect(() => {
@@ -431,8 +434,8 @@ export function DmEditor({ teamId: _teamId, team, template, departments, contact
   }
 
   return (
-    <div className="grid gap-5 xl:grid-cols-[280px_minmax(420px,1fr)_300px]">
-      <section className="space-y-4">
+    <div className="grid items-start gap-5 xl:grid-cols-[280px_minmax(0,1fr)_300px]">
+      <section className="space-y-4 xl:sticky xl:top-4">
         <div className="luxury-panel">
           <p className="text-sm font-black uppercase tracking-normal text-gold-300">PPT Editor</p>
           <h1 className="mt-2 text-3xl font-black text-white">自由編輯</h1>
@@ -501,15 +504,25 @@ export function DmEditor({ teamId: _teamId, team, template, departments, contact
             </div>
           </div>
 
-          <div className="grid place-items-center rounded-2xl border border-line bg-slate-100 p-3 shadow-inner">
-            <div style={{ width: template.width * scale, height: template.height * scale }}>
+          <div className="grid w-full place-items-center rounded-2xl border border-line bg-slate-100 p-3 shadow-inner">
+            <div
+              className="overflow-hidden rounded-xl bg-white shadow-panel"
+              style={{
+                width: Math.ceil(template.width * scale),
+                height: Math.ceil(template.height * scale)
+              }}
+            >
               <Stage
                 ref={stageRef}
                 width={template.width}
                 height={template.height}
-                scaleX={scale}
-                scaleY={scale}
-                className="rounded-xl bg-white shadow-panel"
+                style={{
+                  width: Math.ceil(template.width * scale),
+                  height: Math.ceil(template.height * scale),
+                  transform: `scale(${scale})`,
+                  transformOrigin: "top left"
+                }}
+                className="bg-white"
                 onMouseDown={(event) => {
                   if (event.target === event.target.getStage()) setSelectedId(null);
                 }}
@@ -563,7 +576,7 @@ export function DmEditor({ teamId: _teamId, team, template, departments, contact
         ) : null}
       </section>
 
-      <aside className="space-y-4">
+      <aside className="space-y-4 xl:sticky xl:top-4">
         <div className="card p-4">
           <p className="eyebrow">Style Panel</p>
           <h2 className="section-title text-2xl">文字編輯</h2>
